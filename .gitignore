@@ -1,3 +1,4 @@
 install.php
 buoy_cron.php
-
+update_gauges.php
+update_orbs.php
