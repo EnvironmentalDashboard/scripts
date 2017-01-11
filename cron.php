@@ -18,7 +18,7 @@ ini_set('display_errors', 'On');
 function cron($db, $bos, $res, $amount, $update_current = false, $update_units = false) {
   sleep(3);
   $time = time();
-  foreach ($db->query('SELECT id, url FROM meters WHERE (num_using > 0 OR for_orb = 1) AND source = \'buildingos\' ORDER BY RAND()') as $row) {
+  foreach ($db->query('SELECT id, url FROM meters WHERE (num_using > 0 OR for_orb = 1 OR orb_server = 1) AND source = \'buildingos\' ORDER BY RAND()') as $row) {
     echo "Fetching meter #{$row['id']}\n";
     // Check to see what the last recorded value is
     // I just added 'AND value IS NOT NULL' because sometimes BuidlingOS returns null data and later fixes it? ...weird
