@@ -1,6 +1,4 @@
 <?php
-error_reporting(-1);
-ini_set('display_errors', 'On');
 /**
  * Cron job to access BuildingOS API and update meter data in database.
  * This file has the cron() function. Look at ~/scripts/jobs/ for their usage.
@@ -15,10 +13,11 @@ ini_set('display_errors', 'On');
  *
  * @author Tim Robert-Fitzgerald June 2016
  */
-function cron($db, $bos, $res, $amount, $update_current = false, $update_units = false) {
-  sleep(3);
+function cron($db, $res, $amount, $update_current = false, $update_units = false, $update_relative_value = false) {
   $time = time();
-  foreach ($db->query('SELECT id, url FROM meters WHERE (num_using > 0 OR for_orb = 1 OR orb_server = 1) AND source = \'buildingos\' ORDER BY RAND()') as $row) {
+  $bos = new BuidlingOS($db);
+  $meter = new Meter($db);
+  foreach ($db->query('SELECT id, grouping, npoints, url FROM meters WHERE (num_using > 0 OR for_orb = 1 OR orb_server = 1) AND source = \'buildingos\' ORDER BY RAND()') as $row) {
     echo "Fetching meter #{$row['id']}\n";
     // Check to see what the last recorded value is
     // I just added 'AND value IS NOT NULL' because sometimes BuidlingOS returns null data and later fixes it? ...weird
@@ -129,10 +128,13 @@ function cron($db, $bos, $res, $amount, $update_current = false, $update_units =
         }
       }
       if ($update_current && $last_value !== null) {
-        echo "Updating current value to: ";
-        var_dump($last_value);
         $stmt = $db->prepare('UPDATE meters SET current = ?, last_updated = ? WHERE id = ? LIMIT 1');
         $stmt->execute(array($last_value, $last_recorded, $row['id']));
+      }
+      if ($update_relative_value) {
+        $relative_value = $meter->relativeValueOfMeterWithPoints($row['id'], $row['grouping'], $row['npoints']);
+        $stmt = $db->prepare('UPDATE meters SET relative_value = ?, last_updated = ? WHERE id = ? LIMIT 1');
+        $stmt->execute(array($last_value, round($relative_value), $last_recorded, $row['id']));
       }
     }
     echo "==================================================================\n\n\n\n";
