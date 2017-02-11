@@ -9,7 +9,9 @@ require '/var/www/html/oberlin/scripts/cron.php';
 $res = 'month';
 $amount = strtotime('-2 years');
 echo '<pre>';
-cron($db, $res, $amount, false, true);
+$bos = new BuildingOS($db);
+$meter = new Meter($db);
+cron($db, $bos, $meter, $res, $amount, false, true, false);
 
 // Custom scrips
 // $interval = 'month';

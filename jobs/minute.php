@@ -9,7 +9,9 @@ require '/var/www/html/oberlin/scripts/cron.php';
 $res = 'live';
 $amount = strtotime('-2 hours');
 echo '<pre>';
-cron($db, $res, $amount, true, false);
+$bos = new BuildingOS($db);
+$meter = new Meter($db);
+cron($db, $bos, $meter, $res, $amount, true, false, false);
 
 // Custom scrips
 // $interval = 'minute';

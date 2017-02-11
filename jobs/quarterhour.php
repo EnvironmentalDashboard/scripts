@@ -9,7 +9,9 @@ require '/var/www/html/oberlin/scripts/cron.php';
 $res = 'quarterhour';
 $amount = strtotime('-2 weeks');
 echo '<pre>';
-cron($db, $res, $amount, false, false);
+$bos = new BuildingOS($db);
+$meter = new Meter($db);
+cron($db, $bos, $meter, $res, $amount, false, false, false);
 
 // Custom scrips
 // $interval = 'quarterhour';
