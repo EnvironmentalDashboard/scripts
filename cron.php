@@ -135,6 +135,7 @@ function cron($db, $bos, $meter, $res, $amount, $update_current = false, $update
         $day_of_week = date('w') + 1; // https://dev.mysql.com/doc/refman/5.5/en/date-and-time-functions.html#function_dayofweek
         foreach ($stmt->fetchAll() as $rv_row) {
           foreach (json_decode($rv_row['grouping'], true) as $group) {
+            // Example JSON: [{"days":[1,2,3,4,5],"npoints":8},{"days":[1,7],"npoints":5}]
             if (in_array($day_of_week, $group['days'])) {
               $days = $group['days'];
               if (array_key_exists('npoints', $group)) {
