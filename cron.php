@@ -120,8 +120,10 @@ function cron($db, $bos, $meter, $res, $amount, $update_current = false, $update
         if ($empty || $localtime > $last_recording) {
           $stmt = $db->prepare("INSERT INTO meter_data (meter_id, value, recorded, resolution) VALUES (?, ?, ?, ?)");
           $stmt->execute(array($row['id'], $data['value'], $localtime, $res));
-          $last_value = $data['value'];
-          $last_recorded = $localtime;
+          if ($data['value'] !== null) {
+            $last_value = $data['value'];
+            $last_recorded = $localtime;
+          }
           echo "{$data['value']} @ {$localtime}\n";
         }
       }
@@ -134,8 +136,8 @@ function cron($db, $bos, $meter, $res, $amount, $update_current = false, $update
         $stmt->execute(array($row['id']));
         $day_of_week = date('w') + 1; // https://dev.mysql.com/doc/refman/5.5/en/date-and-time-functions.html#function_dayofweek
         foreach ($stmt->fetchAll() as $rv_row) {
+          // Example JSON: [{"days":[1,2,3,4,5],"npoints":8},{"days":[1,7],"npoints":5}]
           foreach (json_decode($rv_row['grouping'], true) as $group) {
-            // Example JSON: [{"days":[1,2,3,4,5],"npoints":8},{"days":[1,7],"npoints":5}]
             if (in_array($day_of_week, $group['days'])) {
               $days = $group['days'];
               if (array_key_exists('npoints', $group)) {
@@ -162,16 +164,14 @@ function cron($db, $bos, $meter, $res, $amount, $update_current = false, $update
                 $stmt->execute(array($row['id'], $amount, time(), 'hour'));
                 $relative_value = $meter->relativeValue($stmt->fetchAll(), $last_value);
               }
+              $stmt = $db->prepare('UPDATE relative_values SET relative_value = ? WHERE id = ?');
+              $stmt->execute(array(round($relative_value), $rv_row['id']));
               break;
-            }
-            $stmt = $db->prepare('UPDATE relative_values SET relative_value = ? WHERE id = ?');
-            $stmt->execute(array($relative_value, $rv_row['id']));
-          }
-        }
-        $stmt = $db->prepare('UPDATE meters SET last_updated = ? WHERE id = ? LIMIT 1');
-        $stmt->execute(array($last_recorded, $row['id']));
-      }
-    }
+            } // if
+          } // foreach
+        } // foreach
+      } // if $update_relative_value
+    } // if !empty($meter_data)
     echo "==================================================================\n\n\n\n";
   }
 }
