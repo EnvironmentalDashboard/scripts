@@ -15,7 +15,7 @@
  */
 function cron($db, $bos, $meter, $res, $amount, $update_current = false, $update_units = false, $update_relative_value = false) {
   $time = time();
-  foreach ($db->query('SELECT id, url FROM meters WHERE (num_using > 0 OR for_orb = 1 OR orb_server > 0) AND source = \'buildingos\' ORDER BY RAND()') as $row) { // Get all the meters that were manually put on the cron job (i.e. num_using), meters used by Oberlin's orbs (i.e. for_orb), and meters used by Jeremy's orbs app (i.e. orb_server)
+  foreach ($db->query('SELECT id, bos_uuid url FROM meters WHERE (num_using > 0 OR for_orb = 1 OR orb_server > 0) AND source = \'buildingos\' ORDER BY RAND()') as $row) { // Get all the meters that were manually put on the cron job (i.e. num_using), meters used by Oberlin's orbs (i.e. for_orb), and meters used by Jeremy's orbs app (i.e. orb_server)
     echo "Fetching meter #{$row['id']}\n";
     // Check to see what the last recorded value is
     // I just added 'AND value IS NOT NULL' because sometimes BuildingOS returns null data and later fixes it? ...weird
@@ -164,8 +164,8 @@ function cron($db, $bos, $meter, $res, $amount, $update_current = false, $update
                 $stmt->execute(array($row['id'], $amount, time(), 'hour'));
                 $relative_value = $meter->relativeValue($stmt->fetchAll(), $last_value);
               }
-              $stmt = $db->prepare('UPDATE relative_values SET relative_value = ? WHERE id = ?');
-              $stmt->execute(array(round($relative_value), $rv_row['id']));
+              $stmt = $db->prepare('UPDATE relative_values SET relative_value = ? WHERE meter_uuid = ?');
+              $stmt->execute(array(round($relative_value), $rv_row['bos_uuid']));
               break;
             } // if
           } // foreach
