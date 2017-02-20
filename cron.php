@@ -15,7 +15,7 @@
  */
 function cron($db, $bos, $meter, $res, $amount, $update_current = false, $update_units = false, $update_relative_value = false) {
   $time = time();
-  foreach ($db->query('SELECT id, bos_uuid url FROM meters WHERE (num_using > 0 OR for_orb = 1 OR orb_server > 0) AND source = \'buildingos\' ORDER BY RAND()') as $row) { // Get all the meters that were manually put on the cron job (i.e. num_using), meters used by Oberlin's orbs (i.e. for_orb), and meters used by Jeremy's orbs app (i.e. orb_server)
+  foreach ($db->query('SELECT id, bos_uuid, url FROM meters WHERE (num_using > 0 OR for_orb = 1 OR orb_server > 0) AND source = \'buildingos\' ORDER BY RAND()') as $row) { // Get all the meters that were manually put on the cron job (i.e. num_using), meters used by Oberlin's orbs (i.e. for_orb), and meters used by Jeremy's orbs app (i.e. orb_server)
     echo "Fetching meter #{$row['id']}\n";
     // Check to see what the last recorded value is
     // I just added 'AND value IS NOT NULL' because sometimes BuildingOS returns null data and later fixes it? ...weird
@@ -132,8 +132,8 @@ function cron($db, $bos, $meter, $res, $amount, $update_current = false, $update
         $stmt->execute(array($last_value, $last_recorded, $row['id']));
       }
       if ($update_relative_value && $last_value !== null) { // Update relative_values table
-        $stmt = $db->prepare('SELECT id, grouping FROM relative_values WHERE meter_id = ?');
-        $stmt->execute(array($row['id']));
+        $stmt = $db->prepare('SELECT id, grouping FROM relative_values WHERE meter_uuid = ?');
+        $stmt->execute(array($row['bos_uuid']));
         $day_of_week = date('w') + 1; // https://dev.mysql.com/doc/refman/5.5/en/date-and-time-functions.html#function_dayofweek
         foreach ($stmt->fetchAll() as $rv_row) {
           // Example JSON: [{"days":[1,2,3,4,5],"npoints":8},{"days":[1,7],"npoints":5}]
