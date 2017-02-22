@@ -132,43 +132,11 @@ function cron($db, $bos, $meter, $res, $amount, $update_current = false, $update
         $stmt->execute(array($last_value, $last_recorded, $row['id']));
       }
       if ($update_relative_value && $last_value !== null) { // Update relative_values table
-        $stmt = $db->prepare('SELECT id, grouping FROM relative_values WHERE meter_uuid = ?');
+        $stmt = $db->prepare('SELECT id, grouping FROM relative_values WHERE meter_uuid = ? AND grouping IS NOT NULL');
         $stmt->execute(array($row['bos_uuid']));
         $day_of_week = date('w') + 1; // https://dev.mysql.com/doc/refman/5.5/en/date-and-time-functions.html#function_dayofweek
         foreach ($stmt->fetchAll() as $rv_row) {
-          // Example JSON: [{"days":[1,2,3,4,5],"npoints":8},{"days":[1,7],"npoints":5}]
-          foreach (json_decode($rv_row['grouping'], true) as $group) {
-            if (in_array($day_of_week, $group['days'])) {
-              $days = $group['days'];
-              if (array_key_exists('npoints', $group)) {
-                $amount = intval($group['npoints']);
-                $days = implode(',', array_map('intval', $days)); // prevent sql injection with intval as we're concatenating directly into query
-                $stmt = $db->prepare(
-                  "SELECT value FROM meter_data
-                  WHERE meter_id = ? AND value IS NOT NULL AND resolution = ?
-                  AND HOUR(FROM_UNIXTIME(recorded)) = HOUR(NOW())
-                  AND DAYOFWEEK(FROM_UNIXTIME(recorded)) IN ({$days})
-                  ORDER BY recorded DESC LIMIT " . $amount); // ORDER BY recorded DESC is needed because we're trying to extract the most recent $amount points
-                $stmt->execute(array($row['id'], 'hour'));
-                $relative_value = $meter->relativeValue(array_map('floatval', array_column($stmt->fetchAll(), 'value')), $last_value);
-              } else if (array_key_exists('start', $group)) {
-                $amount = intval($group['start']);
-                $days = implode(',', array_map('intval', $days));
-                $stmt = $db->prepare(
-                  "SELECT value, recorded FROM meter_data
-                  WHERE meter_id = ? AND value IS NOT NULL
-                  AND recorded > ? AND recorded < ? AND resolution = ?
-                  AND HOUR(FROM_UNIXTIME(recorded)) = HOUR(NOW())
-                  AND DAYOFWEEK(FROM_UNIXTIME(recorded)) IN ({$days})
-                  ORDER BY value ASC"); // ORDER BY value ASC is efficient here because the relativeValue() method will sort the data like this (and there's no need to sort by recorded -- the amount of data is determined by $amount, which is a unix timestamp representing when the data should start)
-                $stmt->execute(array($row['id'], $amount, time(), 'hour'));
-                $relative_value = $meter->relativeValue($stmt->fetchAll(), $last_value);
-              }
-              $stmt = $db->prepare('UPDATE relative_values SET relative_value = ? WHERE meter_uuid = ?');
-              $stmt->execute(array(round($relative_value), $rv_row['bos_uuid']));
-              break;
-            } // if
-          } // foreach
+          $meter->updateRelativeValueOfMeter($row['id'], $rv_row['grouping'], $rv_row['id'], $last_value);
         } // foreach
       } // if $update_relative_value
     } // if !empty($meter_data)
