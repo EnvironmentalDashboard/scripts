@@ -10,9 +10,12 @@ require '../../scripts/cron.php';
 $res = 'hour';
 $amount = strtotime('-2 months');
 echo '<pre>';
-$bos = new BuildingOS($db);
 $meter = new Meter($db);
-cron($db, $bos, $meter, $res, $amount, false, false, false);
+foreach ($db->query('SELECT api_id FROM users') as $user) {
+  $bos = new BuildingOS($db, $user['api_id']);
+  cron($db, $bos, $meter, $res, $amount, false, false, false);
+}
+
 
 // Custom scrips
 // $interval = 'hour';

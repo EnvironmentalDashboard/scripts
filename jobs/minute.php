@@ -10,9 +10,11 @@ require '../../scripts/cron.php';
 $res = 'live';
 $amount = strtotime('-2 hours');
 echo '<pre>';
-$bos = new BuildingOS($db);
 $meter = new Meter($db);
-cron($db, $bos, $meter, $res, $amount, true, false, false);
+foreach ($db->query('SELECT api_id FROM users') as $user) {
+  $bos = new BuildingOS($db, $user['api_id']);
+  cron($db, $bos, $meter, $res, $amount, true, false, false);
+}
 
 // Custom scrips
 // $interval = 'minute';
