@@ -15,7 +15,7 @@
  */
 function cron($db, $bos, $meter, $res, $amount, $update_current = false, $update_units = false, $update_relative_value = false) {
   $time = time();
-  foreach ($db->query('SELECT id, bos_uuid, url FROM meters WHERE (num_using > 0 OR for_orb = 1 OR orb_server > 0) AND source = \'buildingos\' ORDER BY RAND()') as $row) { // Get all the meters that were manually put on the cron job (i.e. num_using), meters used by Oberlin's orbs (i.e. for_orb), and meters used by Jeremy's orbs app (i.e. orb_server)
+  foreach ($db->query('SELECT id, bos_uuid, url FROM meters WHERE (gauges_using > 0 OR for_orb > 0 OR orb_server > 0 OR timeseries_using > 0) AND source = \'buildingos\' ORDER BY last_updated ASC') as $row) { // ORDER BY last_updated because sometimes the API stops responding if it's queried too quickly and not all the meters get updated
     echo "Fetching meter #{$row['id']}\n";
     // Check to see what the last recorded value is
     // I just added 'AND value IS NOT NULL' because sometimes BuildingOS returns null data and later fixes it? ...weird
@@ -131,12 +131,14 @@ function cron($db, $bos, $meter, $res, $amount, $update_current = false, $update
         $stmt = $db->prepare('UPDATE meters SET current = ?, last_updated = ? WHERE id = ? LIMIT 1');
         $stmt->execute(array($last_value, $last_recorded, $row['id']));
       }
-      if ($update_relative_value && $last_value !== null) { // Update relative_values table
+      if ($update_relative_value) { // Update relative_values table
+        echo "Updating relative_values table:\n";
         $stmt = $db->prepare('SELECT id, grouping FROM relative_values WHERE meter_uuid = ? AND grouping IS NOT NULL');
         $stmt->execute(array($row['bos_uuid']));
         $day_of_week = date('w') + 1; // https://dev.mysql.com/doc/refman/5.5/en/date-and-time-functions.html#function_dayofweek
         foreach ($stmt->fetchAll() as $rv_row) {
           $meter->updateRelativeValueOfMeter($row['id'], $rv_row['grouping'], $rv_row['id'], $last_value);
+          echo "Updated relative value record #{$rv_row['id']}\n";
         } // foreach
       } // if $update_relative_value
     } // if !empty($meter_data)

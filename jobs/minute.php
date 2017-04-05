@@ -11,9 +11,9 @@ $res = 'live';
 $amount = strtotime('-2 hours');
 echo '<pre>';
 $meter = new Meter($db);
-foreach ($db->query('SELECT api_id FROM users') as $user) {
+foreach ($db->query('SELECT api_id FROM users ORDER BY RAND()') as $user) {
   $bos = new BuildingOS($db, $user['api_id']);
-  cron($db, $bos, $meter, $res, $amount, true, false, false);
+  cron($db, $bos, $meter, $res, $amount, true, false, true);
 }
 
 // Custom scrips
