@@ -11,9 +11,9 @@ $res = 'month';
 $amount = strtotime('-2 years');
 echo '<pre>';
 $meter = new Meter($db);
-foreach ($db->query('SELECT api_id FROM users ORDER BY RAND()') as $user) {
+foreach ($db->query('SELECT id, api_id FROM users ORDER BY RAND()') as $user) {
   $bos = new BuildingOS($db, $user['api_id']);
-  cron($db, $bos, $meter, $res, $amount, false, true, false);
+  cron($db, $bos, $meter, $res, $amount, $user['id'], false, true, false);
 }
 
 // Custom scrips

@@ -13,9 +13,9 @@
  *
  * @author Tim Robert-Fitzgerald June 2016
  */
-function cron($db, $bos, $meter, $res, $amount, $update_current = false, $update_units = false, $update_relative_value = false) {
+function cron($db, $bos, $meter, $res, $amount, $user_id, $update_current = false, $update_units = false, $update_relative_value = false) {
   $time = time();
-  foreach ($db->query('SELECT id, bos_uuid, url FROM meters WHERE (gauges_using > 0 OR for_orb > 0 OR orb_server > 0 OR timeseries_using > 0) AND source = \'buildingos\' ORDER BY last_updated ASC') as $row) { // ORDER BY last_updated because sometimes the API stops responding if it's queried too quickly and not all the meters get updated
+  foreach ($db->query("SELECT id, bos_uuid, url FROM meters WHERE (gauges_using > 0 OR for_orb > 0 OR orb_server > 0 OR timeseries_using > 0) AND user_id = '{$user_id}' ORDER BY last_updated ASC") as $row) { // ORDER BY last_updated because sometimes the API stops responding if it's queried too quickly and not all the meters get updated
     echo "Fetching meter #{$row['id']}\n";
     // Check to see what the last recorded value is
     // I just added 'AND value IS NOT NULL' because sometimes BuildingOS returns null data and later fixes it? ...weird
