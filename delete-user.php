@@ -1,7 +1,9 @@
-<?php 
+<?php
+#!/usr/local/bin/php
+chdir(__DIR__);
 require '../includes/db.php';
 $options = getopt('', array('id:'));
-if (array_key_exists('id', $options)) {
+if (array_key_exists('id', $options) && intval($options['id']) > 1) {
   $stmt = $db->prepare('SELECT name FROM users WHERE id = ?');
   $stmt->execute(array($options['id']));
   $name = $stmt->fetchColumn();

@@ -1,10 +1,17 @@
 <?php
+#!/usr/local/bin/php
+chdir(__DIR__);
 require '../includes/db.php';
 require '../includes/class.BuildingOS.php';
 $options = getopt('', array('name:', 'slug:', 'client_id:', 'client_secret:', 'username:', 'password:'));
-$required_options = array('name', 'slug', 'client_id', 'client_secret', 'username', 'password');
-// http://stackoverflow.com/a/7542708/2624391
-if (count(array_intersect($options, $required_options)) === count($required_options)) {
+$ok = true;
+foreach (array('name', 'slug', 'client_id', 'client_secret', 'username', 'password') as $required_option) {
+  if (!array_key_exists($required_option, $options)) {
+    $ok = false;
+    break;
+  }
+}
+if ($ok) {
   $stmt = $db->prepare('INSERT INTO api (client_id, client_secret, username, password) VALUES (?, ?, ?, ?)'); // the all the records in the api table will be
   $stmt->execute(array($options['client_id'], $options['client_secret'], $options['username'], $options['password']));
   $api_id = $db->lastInsertId();

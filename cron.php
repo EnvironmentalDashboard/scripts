@@ -1,5 +1,6 @@
 <?php
 /**
+ * THIS IS AN OUTDATED FILE, SEE THE BUILDINGOS CLASS FOR THE CRON METHOD
  * Cron job to access BuildingOS API and update meter data in database.
  * This file has the cron() function. Look at ~/scripts/jobs/ for their usage.
  *
@@ -15,7 +16,10 @@
  */
 function cron($db, $bos, $meter, $res, $amount, $user_id, $update_current = false, $update_units = false, $update_relative_value = false) {
   $time = time();
-  foreach ($db->query("SELECT id, bos_uuid, url FROM meters WHERE (gauges_using > 0 OR for_orb > 0 OR orb_server > 0 OR timeseries_using > 0) AND user_id = '{$user_id}' ORDER BY last_updated ASC") as $row) { // ORDER BY last_updated because sometimes the API stops responding if it's queried too quickly and not all the meters get updated
+  $meters = $db->prepare('SELECT id, bos_uuid, url FROM meters WHERE (gauges_using > 0 OR for_orb > 0 OR orb_server > 0 OR timeseries_using > 0) AND user_id = ? ORDER BY last_update_attempt ASC'); // ORDER BY last_update_attempt because sometimes the API stops responding if it's queried too quickly and not all the meters get updated
+  echo "SELECT id, bos_uuid, url FROM meters WHERE (gauges_using > 0 OR for_orb > 0 OR orb_server > 0 OR timeseries_using > 0) AND user_id = '{$user_id}' ORDER BY last_update_attempt ASC\n\n";
+  $meters->execute(array($user_id));
+  while ($row = $meters->fetch()) {
     echo "Fetching meter #{$row['id']}\n";
     // Check to see what the last recorded value is
     // I just added 'AND value IS NOT NULL' because sometimes BuildingOS returns null data and later fixes it? ...weird
@@ -127,6 +131,8 @@ function cron($db, $bos, $meter, $res, $amount, $user_id, $update_current = fals
           echo "{$data['value']} @ {$localtime}\n";
         }
       }
+      $stmt = $db->prepare('UPDATE meters SET last_update_attempt = ? WHERE id = ?');
+      $stmt->execute(array($time, $row['id']));
       if ($update_current && $last_value !== null) { // Update meters table
         $stmt = $db->prepare('UPDATE meters SET current = ?, last_updated = ? WHERE id = ? LIMIT 1');
         $stmt->execute(array($last_value, $last_recorded, $row['id']));
