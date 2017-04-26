@@ -7,9 +7,11 @@ chdir(__DIR__);
 require '../../includes/db.php';
 require '../../includes/class.BuildingOS.php';
 require '../../includes/class.Meter.php';
+$res = 'month';
+$meter_obj = new Meter($db);
 $pid = getmypid();
-$stmt = $db->prepare('INSERT INTO daemons (pid, enabled) VALUES (?, b\'1\')');
-$stmt->execute(array($pid));
+$stmt = $db->prepare('INSERT INTO daemons (pid, enabled, target_res) VALUES (?, b\'1\', ?)');
+$stmt->execute(array($pid, $res));
 function shutdown() {
   global $db; // since it's a callback function it can't have args so have to do this instead
   $stmt = $db->prepare('DELETE FROM daemons WHERE pid = ?');
