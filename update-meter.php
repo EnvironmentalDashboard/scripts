@@ -14,10 +14,9 @@ foreach (array('user_id', 'meter_id', 'meter_uuid', 'meter_url', 'res') as $requ
 }
 if ($ok) {
   $bos = new BuildingOS($db, $options['user_id']);
-  updateMeter($meter_id, $meter_uuid, $meter_url, $res, $meterClass);
-  $bos->updateMeter($options['meter_id'], $options['meter_uuid'], $options['meter_url'], $options['res'], new Meter($db));
+  var_dump($bos->updateMeter($options['meter_id'], $options['meter_uuid'], $options['meter_url'] . '/data', $options['res'], new Meter($db)));
 } else {
-  echo 'Usage: php update-meter.php --user_id="0" --meter_id="0" --meter_uuid="0" --meter_url="..." --res="live"';
+  echo 'Usage: php update-meter.php --user_id="1" --meter_id="800" --meter_uuid="oberlin_city_prospect_main_e" --meter_url="https://api.buildingos.com/meters/oberlin_city_prospect_main_e" --res="live"';
   echo "\n";
 }
 ?>

@@ -30,11 +30,13 @@ while (true) {
   $meter = $db->query('SELECT id, user_id, bos_uuid, url, month_last_updated FROM meters
     WHERE (gauges_using > 0 OR for_orb > 0 OR orb_server > 0 OR timeseries_using > 0)
     ORDER BY month_last_updated ASC LIMIT 1')->fetch(); // Select the least up to date meter
-  if ($meter['month_last_updated'] > time() - 600) { // if last reading more recent than 10 mins, sleep
-    sleep(400);
+  if ($meter['month_last_updated'] > time() - 3600) { // if last reading more recent than 1 hour, sleep
+    sleep(100);
   }
   $bos = new BuildingOS($db, $meter['user_id']); // Create an instance of the BuildingOS class that can make calls to the API using the information associated with the user_id
-  $bos->updateMeter($meter['id'], $meter['bos_uuid'], $meter['url'] . '/data', $res, $meter_obj);
+  $params = $bos->updateMeter($meter['id'], $meter['bos_uuid'], $meter['url'] . '/data', $res, $meter_obj);
   $bos = null; // free for garbage collector
+  $stmt = $db->prepare('INSERT INTO bos_log (data, url, res, start, `end`) VALUES (?, ?, ?, ?, ?)');
+  $stmt->execute($params);
 }
 ?>

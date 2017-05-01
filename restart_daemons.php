@@ -9,6 +9,8 @@ require '../includes/db.php'; // Has $db
 $resolutions = array('live', 'quarterhour', 'hour', 'month');
 foreach ($db->query('SELECT pid, target_res FROM daemons WHERE enabled = 1') as $daemon) {
   if (!file_exists("/proc/{$daemon['pid']}")) { // process is not running, but is in db
+    $stmt = $db->prepare('DELETE FROM daemons WHERE pid = ?');
+    $stmt->execute(array($daemon['pid']));
     exec('bash -c "exec nohup setsid php /var/www/html/oberlin/scripts/daemons/'.$daemon['target_res'].'.php > /dev/null 2>&1 &"'); // http://stackoverflow.com/a/3819422/2624391
   }
   if (($key = array_search($daemon['target_res'], $resolutions)) !== false) {

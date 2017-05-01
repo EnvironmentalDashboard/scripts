@@ -32,11 +32,13 @@ while (true) {
     sleep(60);
   }
   $bos = new BuildingOS($db, $meter['user_id']); // Create an instance of the BuildingOS class that can make calls to the API using the information associated with the user_id
-  $meter_data = $bos->updateMeter($meter['id'], $meter['bos_uuid'], $meter['url'] . '/data', $res, $meter_obj);
+  $params = $bos->updateMeter($meter['id'], $meter['bos_uuid'], $meter['url'] . '/data', $res, $meter_obj);
   $bos = null; // free for garbage collector
-  $fp = fopen("/root/daemon_logs/{$pid}.log", 'w');
-  fwrite($fp, "Last iteration completed on " . date('F j, Y, g:i a') . "\n\n");
-  fwrite($fp, "Data from meter #{$meter['id']}:\n" . var_export($meter_data, true) . "\n");
-  fclose($fp);
+  // $fp = fopen("/root/daemon_logs/{$pid}.log", 'w');
+  // fwrite($fp, "Last iteration completed on " . date('F j, Y, g:i a') . "\n\n");
+  // fwrite($fp, "Data from meter #{$meter['id']}:\n" . var_export($meter_data, true) . "\n");
+  // fclose($fp);
+  $stmt = $db->prepare('INSERT INTO bos_log (data, url, res, start, `end`) VALUES (?, ?, ?, ?, ?)');
+  $stmt->execute($params);
 }
 ?>
