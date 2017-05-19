@@ -27,18 +27,20 @@ while (true) {
   }
   $meter = $db->query('SELECT id, user_id, bos_uuid, url, hour_last_updated FROM meters
     WHERE (gauges_using > 0 OR for_orb > 0 OR orb_server > 0 OR timeseries_using > 0)
+    AND id NOT IN (SELECT updating_meter FROM daemons WHERE target_res = \'hour\')
     ORDER BY hour_last_updated ASC LIMIT 1')->fetch(); // Select the least up to date meter
+  $db->query("UPDATE daemons SET updating_meter = {$meter['id']} WHERE pid = {$pid}");
   if ($meter['hour_last_updated'] > time() - 1800) { // if last reading more recent than 30 mins, sleep
     sleep(1500);
   }
   $bos = new BuildingOS($db, $meter['user_id']); // Create an instance of the BuildingOS class that can make calls to the API using the information associated with the user_id
-  $params = $bos->updateMeter($meter['id'], $meter['bos_uuid'], $meter['url'] . '/data', $res, $meter_obj);
+  $bos->updateMeter($meter['id'], $meter['bos_uuid'], $meter['url'] . '/data', $res, $meter_obj);
   $bos = null; // free for garbage collector
   // $fp = fopen("/root/daemon_logs/{$pid}.log", 'w');
   // fwrite($fp, "Last iteration completed on " . date('F j, Y, g:i a') . "\n\n");
   // fwrite($fp, "Data from meter #{$meter['id']}:\n" . var_export($meter_data, true) . "\n");
   // fclose($fp);
-  $stmt = $db->prepare('INSERT INTO bos_log (data, url, res, start, `end`) VALUES (?, ?, ?, ?, ?)');
-  $stmt->execute($params);
+  // $stmt = $db->prepare('INSERT INTO bos_log (data, url, res, start, `end`, run) VALUES (?, ?, ?, ?, ?, ?)');
+  // $stmt->execute($params);
 }
 ?>
