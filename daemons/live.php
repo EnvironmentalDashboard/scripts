@@ -19,7 +19,7 @@ function shutdown() {
 }
 register_shutdown_function('shutdown');
 while (true) {
-  set_time_limit(100); // If a single iteration takes longer than 100s, exit
+  set_time_limit(200); // If a single iteration takes longer than 200s, exit
   if ($db->query("SELECT enabled FROM daemons WHERE pid = {$pid}")->fetchColumn() === '0') {
     // If enabled column turned off, exit
     shutdown();
