@@ -26,10 +26,10 @@ while (true) {
     break; 
   }
   $meter = $db->query('SELECT id, user_id, bos_uuid, url, quarterhour_last_updated FROM meters
-    WHERE (gauges_using > 0 OR for_orb > 0 OR orb_server > 0 OR timeseries_using > 0)
+    WHERE (gauges_using > 0 OR for_orb > 0 OR timeseries_using > 0) OR bos_uuid IN (SELECT DISTINCT meter_uuid FROM relative_values WHERE permission = \'orb_server\' AND meter_uuid != \'\')
     AND id NOT IN (SELECT updating_meter FROM daemons WHERE target_res = \'quarterhour\')
     ORDER BY quarterhour_last_updated ASC LIMIT 1')->fetch(); // Select the least up to date meter
-  $db->query("UPDATE daemons SET updating_meter = {$meter['id']} WHERE pid = {$pid}");
+  $db->query("UPDATE daemons SET updating_meter = {$meter['id']}, memory_usage = ".memory_get_usage(true).", memory_peak_usage = ".memory_get_peak_usage(true)." WHERE pid = {$pid}");
   if ($meter['quarterhour_last_updated'] > time() - 600) { // if last reading more recent than 10 mins, sleep
     sleep(400);
   }

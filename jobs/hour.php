@@ -14,7 +14,7 @@ $amount = strtotime('-2 months');
 // $meter = new Meter($db);
 // foreach ($db->query('SELECT id, api_id FROM users ORDER BY RAND()') as $user) {
 //   $bos = new BuildingOS($db, $user['api_id']); // BuildingOS class contains methods that fetch data from API using API credentials associated with the api_id
-//   cron($db, $bos, $meter, $res, $amount, $user['id'], false, false, false); // Will update all the meters associated with the $user_id and (gauges_using > 0 OR for_orb > 0 OR orb_server > 0 OR timeseries_using > 0)
+//   cron($db, $bos, $meter, $res, $amount, $user['id'], false, false, false); // Will update all the meters associated with the $user_id and (gauges_using > 0 OR for_orb > 0 OR timeseries_using > 0) OR bos_uuid IN (SELECT DISTINCT meter_uuid FROM relative_values WHERE permission = 'orb_server')
 // }
 
 $options = getopt('', array('user_id:'));
