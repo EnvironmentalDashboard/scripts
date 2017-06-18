@@ -35,4 +35,6 @@ foreach ($ids as $id) {
     $stmt->execute(array($i, $val, $time, 'quarterhour'));
   }
 }
+$stmt = $db->prepare('DELETE FROM meter_data WHERE meter_id >= ? AND meter_id <= ? AND resolution = ? AND recorded >= ?');
+$stmt->execute(array(1906, 1960, 'quarterhour', strtotime('-2 weeks')));
 ?>

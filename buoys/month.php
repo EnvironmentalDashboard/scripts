@@ -28,11 +28,13 @@ $ids = array(
   array(1958, 1959, 1960));
 foreach ($ids as $id) {
   $stmt = $db->prepare('SELECT AVG(value) FROM meter_data WHERE resolution = ? AND recorded >= ? AND meter_id = ?');
-  $stmt->execute(array('live', $start, $id[0]));
+  $stmt->execute(array('hour', $start, $id[0]));
   $val = $stmt->fetchColumn();
   foreach ($id as $i) {
     $stmt = $db->prepare('INSERT INTO meter_data (meter_id, value, recorded, resolution) VALUES (?, ?, ?, ?)');
     $stmt->execute(array($i, $val, $time, 'month'));
   }
 }
+$stmt = $db->prepare('DELETE FROM meter_data WHERE meter_id >= ? AND meter_id <= ? AND resolution = ? AND recorded >= ?');
+$stmt->execute(array(1906, 1960, 'month', strtotime('-2 years')));
 ?>

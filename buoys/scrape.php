@@ -41,4 +41,6 @@ foreach ($rows as $row) { // each td value will be a $row
     $stmt->execute(array($id, $val, $time, 'live'));
   }
 }
+$stmt = $db->prepare('DELETE FROM meter_data WHERE meter_id >= ? AND meter_id <= ? AND resolution = ? AND recorded >= ?');
+$stmt->execute(array(1906, 1960, 'live', $time - 10800)); // 10800s is 3 hours i.e. delete data older than 3 hours
 ?>
