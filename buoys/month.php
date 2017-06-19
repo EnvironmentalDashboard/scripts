@@ -35,6 +35,6 @@ foreach ($ids as $id) {
     $stmt->execute(array($i, $val, $time, 'month'));
   }
 }
-$stmt = $db->prepare('DELETE FROM meter_data WHERE meter_id >= ? AND meter_id <= ? AND resolution = ? AND recorded >= ?');
+$stmt = $db->prepare('DELETE FROM meter_data WHERE meter_id >= ? AND meter_id <= ? AND resolution = ? AND recorded < ?');
 $stmt->execute(array(1906, 1960, 'month', strtotime('-2 years')));
 ?>
