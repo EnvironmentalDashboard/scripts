@@ -39,6 +39,8 @@ foreach ($rows as $row) { // each td value will be a $row
   foreach ($ids[$i++] as $id) {
     $stmt = $db->prepare('INSERT INTO meter_data (meter_id, value, recorded, resolution) VALUES (?, ?, ?, ?)');
     $stmt->execute(array($id, $val, $time, 'live'));
+    $stmt = $db->prepare('UPDATE meters SET current = ? WHERE id = ?');
+    $stmt->execute(array($val, $id));
   }
 }
 $stmt = $db->prepare('DELETE FROM meter_data WHERE meter_id >= ? AND meter_id <= ? AND resolution = ? AND recorded < ?');
