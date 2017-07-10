@@ -25,7 +25,7 @@ while (true) {
     shutdown();
     break; 
   }
-  $meter = $db->query('SELECT id, user_id, bos_uuid, url, hour_last_updated FROM meters
+  $meter = $db->query('SELECT id, org_id, bos_uuid, url, hour_last_updated FROM meters
     WHERE (gauges_using > 0 OR for_orb > 0 OR timeseries_using > 0) OR bos_uuid IN (SELECT DISTINCT meter_uuid FROM relative_values WHERE permission = \'orb_server\' AND meter_uuid != \'\')
     AND id NOT IN (SELECT updating_meter FROM daemons WHERE target_res = \'hour\')
     AND source = \'buildingos\'
@@ -34,7 +34,7 @@ while (true) {
   if ($meter['hour_last_updated'] > time() - 1800) { // if last reading more recent than 30 mins, sleep
     sleep(1500);
   }
-  $bos = new BuildingOS($db, $meter['user_id']); // Create an instance of the BuildingOS class that can make calls to the API using the information associated with the user_id
+  $bos = new BuildingOS($db, $meter['org_id']); // Create an instance of the BuildingOS class that can make calls to the API using the information associated with the org_id
   $bos->updateMeter($meter['id'], $meter['bos_uuid'], $meter['url'] . '/data', $res, $meter_obj);
   $bos = null; // free for garbage collector
   // $fp = fopen("/root/daemon_logs/{$pid}.log", 'w');

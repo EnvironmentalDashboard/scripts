@@ -1,4 +1,5 @@
 <?php
+/* OUTDATED
 #!/usr/local/bin/php
 chdir(__DIR__);
 require '../includes/db.php';
