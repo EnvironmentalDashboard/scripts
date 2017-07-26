@@ -6,7 +6,8 @@ ini_set('display_errors', 'On');
 date_default_timezone_set('America/New_York');
 chdir(__DIR__);
 require '../includes/db.php'; // Has $db
-$resolutions = array('live', 'live', 'live', 'quarterhour', 'quarterhour', 'hour', 'month');
+// $resolutions = array('live', 'live', 'live', 'live', 'quarterhour', 'quarterhour', 'hour', 'month');
+$resolutions = array('live', 'live', 'live', 'live', 'live');
 foreach ($db->query('SELECT pid, target_res FROM daemons WHERE enabled = 1') as $daemon) {
   if (!file_exists("/proc/{$daemon['pid']}")) { // process is not running, but is in db
     $db->query("DELETE FROM daemons WHERE pid = {$daemon['pid']}");

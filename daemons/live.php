@@ -10,7 +10,7 @@ require '../../includes/class.Meter.php';
 $res = 'live';
 $meter_obj = new Meter($db);
 $pid = getmypid();
-$stmt = $db->prepare('INSERT INTO daemons (pid, enabled, target_res) VALUES (?, b\'1\', ?)');
+$stmt = $db->prepare('INSERT INTO daemons (pid, enabled, target_res) VALUES (?, 1, ?)');
 $stmt->execute(array($pid, $res));
 function shutdown() {
   global $db; // since it's a callback function it can't have args so have to do this instead
@@ -19,7 +19,7 @@ function shutdown() {
 }
 register_shutdown_function('shutdown');
 while (true) {
-  set_time_limit(200); // If a single iteration takes longer than 200s, exit
+  set_time_limit(300); // If a single iteration takes longer than 300s, exit
   if ($db->query("SELECT enabled FROM daemons WHERE pid = {$pid}")->fetchColumn() === '0') {
     // If enabled column turned off, exit
     shutdown();
@@ -34,7 +34,7 @@ while (true) {
   if ($meter['live_last_updated'] > time() - 120) { // if last reading more recent than 2 mins, sleep
     sleep(60);
   }
-  $bos = new BuildingOS($db, $meter['org_id']); // Create an instance of the BuildingOS class that can make calls to the API using the information associated with the org_id
+  $bos = new BuildingOS($db, $db->query("SELECT api_id FROM orgs WHERE id = {$meter['org_id']}")->fetchColumn()); // Create an instance of the BuildingOS class that can make calls to the API using the information associated with the org_id
   $bos->updateMeter($meter['id'], $meter['bos_uuid'], $meter['url'] . '/data', $res, $meter_obj);
   $bos = null; // free for garbage collector
   // $fp = fopen("/root/daemon_logs/{$pid}.log", 'w');

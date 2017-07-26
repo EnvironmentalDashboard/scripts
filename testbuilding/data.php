@@ -10,7 +10,7 @@ function test_data($now, $start, $end) {
   // $total_amt = $end - $start;
   // $amt_left = $end - $now;
   // return date('G', $now) * ($amt_left/$total_amt);
-  return 5;
+  return null;
 }
 
 $data = array();

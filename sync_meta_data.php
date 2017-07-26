@@ -5,12 +5,8 @@ ini_set('display_errors', 'On');
 chdir(__DIR__);
 require '../includes/db.php';
 require '../includes/class.BuildingOS.php';
-foreach ($db->query('SELECT id, url FROM orgs') as $org) {
-  $bos = new BuildingOS($db, $org['id']);
-  $arr = json_decode($org['orgs'], true);
-  if ($arr === false) {
-    $arr = array();
-  }
-  $bos->syncBuildings(array($org['url']), true);
+foreach ($db->query('SELECT api_id, url FROM orgs') as $org) {
+  $bos = new BuildingOS($db, $org['api_id']);
+  $bos->syncBuildings($org['url'], true);
 }
 ?>
