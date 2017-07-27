@@ -1,9 +1,11 @@
 /**
- * Run with "gcc -g -pedantic -std=c99 -Wall -Wextra relative_value.c -o calcrv `mysql_config --cflags --libs` && ./calcrv"
+ * Updates the relative_values table
  */
 #define _XOPEN_SOURCE // for strptime
 #define _GNU_SOURCE // for strptime
-#define TARGET_RECORDS "SELECT DISTINCT grouping, meter_uuid FROM relative_values WHERE grouping != '[]' AND grouping != '' AND grouping IS NOT NULL AND permission IS NOT NULL ORDER BY last_updated ASC"
+#define TARGET_RECORDS "SELECT DISTINCT grouping, meter_uuid FROM relative_values WHERE grouping != '[]' AND grouping != '' AND grouping IS NOT NULL AND permission IS NOT NULL GROUP BY meter_uuid, grouping ORDER BY AVG(last_updated) ASC"
+#define CURRENT_READING1 "SELECT AVG(value) FROM meter_data WHERE meter_id = %d AND resolution = 'live' AND recorded >= %d AND value IS NOT NULL"
+#define CURRENT_READING2 "SELECT current FROM meters WHERE id = %d"
 #define TYPICAL_DATA1 "SELECT value FROM meter_data WHERE meter_id = %d AND value IS NOT NULL AND resolution = '%s' AND HOUR(FROM_UNIXTIME(recorded)) = HOUR(NOW()) AND DAYOFWEEK(FROM_UNIXTIME(recorded)) IN (%s) ORDER BY recorded DESC LIMIT %d"
 #define TYPICAL_DATA2 "SELECT value FROM meter_data WHERE meter_id = %d AND value IS NOT NULL AND recorded > %d AND recorded < %d AND resolution = '%s' AND HOUR(FROM_UNIXTIME(recorded)) = HOUR(NOW()) AND DAYOFWEEK(FROM_UNIXTIME(recorded)) IN (%s) ORDER BY value ASC"
 #define ISO8601_FORMAT "%Y-%m-%dT%H:%M:%S-04:00" // EST is -4:00
@@ -17,20 +19,44 @@
 #include "libc/cJSON/cJSON.h"
 #include "../daemons/db.h"
 
+
+/**
+ * Scale a percent (value which is 0-100) to a new min and max
+ * @param  pct value to scale
+ * @param  min new min of range
+ * @param  max new max of range
+ */
+float scale(float pct, int min, int max) {
+	return (pct / 100.0) * (max - min) + min;
+}
+
+/**
+ * comporator for qsort
+ */
 int compare(const void *a, const void *b) {
   float fa = *(const float*) a;
   float fb = *(const float*) b;
   return (fa > fb) - (fa < fb);
 }
 
+/**
+ * Produces the relative value for a data set given in an array of 'typical' and a 'current' to
+ * compare against
+ */
 float relative_value(float *typical, float current, int size, int min, int max) {
+	int i, j, k;
+	k = 0;
 	qsort(typical, size, sizeof(float), compare);
-	for (int i = 0; i < size; ++i) {
-		if (typical[i] > current) {
+	for (i = 0; i < size; ++i) {
+		if (typical[i] >= current) {
+			j = i;
+			while (j < size && current == typical[++j])
+				k++;
 			break;
 		}
 	}
-	return i / size;
+	float rv = ((i - k) / (size - 1)) * 100;
+	return scale(rv, min, max);
 }
 
 void update_meter_rv(MYSQL *conn, char *grouping, char *uuid, int day_of_week, time_t t) {
@@ -50,6 +76,7 @@ void update_meter_rv(MYSQL *conn, char *grouping, char *uuid, int day_of_week, t
 	int meter_id = atoi(row[0]);
 	cJSON *root = cJSON_Parse(grouping);
 	int k = 0;
+	int typicali = 0;
 	for (int i = 0; i < cJSON_GetArraySize(root); i++) {
 		int this_iteration = 0;
 		cJSON *subitem = cJSON_GetArrayItem(root, i);
@@ -74,9 +101,9 @@ void update_meter_rv(MYSQL *conn, char *grouping, char *uuid, int day_of_week, t
 			// Either calculate the current value based on the average of the last n minutes or the last non null point
 			if (cJSON_HasObjectItem(subitem, "minsAveraged")) {
 				int secsAveraged = cJSON_GetObjectItem(subitem, "minsAveraged")->valueint * 60;
-				sprintf(query, "SELECT AVG(value) FROM meter_data WHERE meter_id = %d AND resolution = 'live' AND recorded >= %d AND value IS NOT NULL", meter_id, t-secsAveraged);
+				sprintf(query, CURRENT_READING1, meter_id, (int) t-secsAveraged);
 			} else {
-				sprintf(query, "SELECT current FROM meters WHERE id = %d", meter_id);
+				sprintf(query, CURRENT_READING2, meter_id);
 			}
 			if (mysql_query(conn, query)) {
 				fprintf(stderr, mysql_error(conn));
@@ -85,7 +112,7 @@ void update_meter_rv(MYSQL *conn, char *grouping, char *uuid, int day_of_week, t
 			row = mysql_fetch_row(res);
 			mysql_free_result(res);
 			if (row == NULL) {
-				fprintf(stderr, "No results\n");
+				fprintf(stderr, "No results 1\n");
 				exit(1);
 			}
 			float current = atof(row[0]);
@@ -112,14 +139,20 @@ void update_meter_rv(MYSQL *conn, char *grouping, char *uuid, int day_of_week, t
 			res = mysql_store_result(conn);
 			row = mysql_fetch_row(res);
 			if (row == NULL) {
-				fprintf(stderr, "No results\n");
+				fprintf(stderr, "No results 2\n");
 				exit(1);
 			}
 			while ((row = mysql_fetch_row(res))) {
 				typical[typicali++] = atof(row[0]);
 			}
 			mysql_free_result(res);
-			float relative_value = relative_value(typical, current, typicali, 0, 100);
+			float rv = relative_value(typical, current, typicali, 0, 100);
+			sprintf(query, "UPDATE relative_values SET relative_value = %f WHERE meter_uuid = '%s' AND grouping = '%s'", rv, uuid, grouping);
+			printf("%s\n", query);
+			// if (mysql_query(conn, query)) {
+			// 	fprintf(stderr, mysql_error(conn));
+			// 	exit(1);
+			// }
 			break;
 		}
 	}
