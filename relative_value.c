@@ -42,27 +42,35 @@ int compare(const void *a, const void *b) {
 /**
  * Produces the relative value for a data set given in an array of 'typical' and a 'current' to
  * compare against
+ * float array[] = {62.5, 63.0, 65.0, 66.0, 66.5, 70.0};
+ * printf("%.3f\n", relative_value(array, 64.0, 6, 0, 100));
+ * exit(1); prints 33.333
  */
 float relative_value(float *typical, float current, int size, int min, int max) {
 	int i, j, k;
-	k = 0;
+	k = i = 0;
 	qsort(typical, size, sizeof(float), compare);
-	for (i = 0; i < size; ++i) {
+	for (; i < size; ++i) {
 		if (typical[i] >= current) {
 			j = i;
-			while (j < size && current == typical[++j])
-				k++;
+			// If the typical data contains lots of floats that are the same as current,
+			// taking the first occurrance understates the relative value
+			// This happens often with water meters that are usually 0 (so the typical has a lot of 0s) and the current reading is also 0
+			while (j != (size - 1) && current == typical[++j]) {
+				++k; // count how many values are the same 
+			}
 			break;
 		}
 	}
-	float rv = ((i - k) / (size - 1)) * 100;
+	float adjusted_i = i + (k/2); // move the index halfway between the flatlined data
+	float rv = (adjusted_i / size) * 100; // index / the size [normally you would subtract 1 bc it's 0 based but I'm counting the current point as part of the typical data]) * 100
 	return scale(rv, min, max);
 }
 
 void update_meter_rv(MYSQL *conn, char *grouping, char *uuid, int day_of_week, time_t t) {
 	MYSQL_RES *res;
 	MYSQL_ROW row;
-	int target_days[8];
+	// int target_days[8];
 	float typical[SMALL_CONTAINER];
 	char query[SMALL_CONTAINER];
 	char day_sql_str[50];
@@ -72,6 +80,10 @@ void update_meter_rv(MYSQL *conn, char *grouping, char *uuid, int day_of_week, t
 	}
 	res = mysql_store_result(conn);
 	row = mysql_fetch_row(res);
+	if (row == NULL) {
+		fprintf(stderr, "No meter with uuid: %s\n", uuid);
+		return;
+	}
 	mysql_free_result(res);
 	int meter_id = atoi(row[0]);
 	cJSON *root = cJSON_Parse(grouping);
@@ -81,12 +93,10 @@ void update_meter_rv(MYSQL *conn, char *grouping, char *uuid, int day_of_week, t
 		int this_iteration = 0;
 		cJSON *subitem = cJSON_GetArrayItem(root, i);
 		cJSON *days = cJSON_GetObjectItem(subitem, "days");
-		cJSON *npoints = cJSON_GetObjectItem(subitem, "npoints");
-		// printf("\nnpoints: %d\ndays: ", npoints->valueint);
 		int num_days = cJSON_GetArraySize(days);
 		for (int j = 0; j < num_days; j++) {
 			int day_index = cJSON_GetArrayItem(days, j)->valueint;
-			target_days[j] = day_index;
+			// target_days[j] = day_index;
 			day_sql_str[k++] = day_index + '0'; // https://stackoverflow.com/a/2279401/2624391
 			if (j != num_days - 1) {
 				day_sql_str[k++] = ',';
@@ -97,7 +107,7 @@ void update_meter_rv(MYSQL *conn, char *grouping, char *uuid, int day_of_week, t
 				this_iteration = 1;
 			}
 		}
-		if (this_iteration) { // target_days filled with days in same group as current day
+		if (this_iteration) {
 			// Either calculate the current value based on the average of the last n minutes or the last non null point
 			if (cJSON_HasObjectItem(subitem, "minsAveraged")) {
 				int secsAveraged = cJSON_GetObjectItem(subitem, "minsAveraged")->valueint * 60;
@@ -111,9 +121,9 @@ void update_meter_rv(MYSQL *conn, char *grouping, char *uuid, int day_of_week, t
 			res = mysql_store_result(conn);
 			row = mysql_fetch_row(res);
 			mysql_free_result(res);
-			if (row == NULL) {
-				fprintf(stderr, "No results 1\n");
-				exit(1);
+			if (row == NULL || row[0] == 0x0 || row[0][0] == '\0') {
+				fprintf(stderr, "No current reading\n");
+				return;
 			}
 			float current = atof(row[0]);
 			
@@ -139,20 +149,20 @@ void update_meter_rv(MYSQL *conn, char *grouping, char *uuid, int day_of_week, t
 			res = mysql_store_result(conn);
 			row = mysql_fetch_row(res);
 			if (row == NULL) {
-				fprintf(stderr, "No results 2\n");
-				exit(1);
+				fprintf(stderr, "No meter data\n");
+				return;
 			}
 			while ((row = mysql_fetch_row(res))) {
 				typical[typicali++] = atof(row[0]);
 			}
 			mysql_free_result(res);
 			float rv = relative_value(typical, current, typicali, 0, 100);
-			sprintf(query, "UPDATE relative_values SET relative_value = %f WHERE meter_uuid = '%s' AND grouping = '%s'", rv, uuid, grouping);
-			printf("%s\n", query);
-			// if (mysql_query(conn, query)) {
-			// 	fprintf(stderr, mysql_error(conn));
-			// 	exit(1);
-			// }
+			sprintf(query, "UPDATE relative_values SET relative_value = %.3f, last_updated = %d WHERE meter_uuid = '%s' AND grouping = '%s'", rv, (int) t, uuid, grouping);
+			printf("EXECUTED %s\n", query);
+			if (mysql_query(conn, query)) {
+				fprintf(stderr, mysql_error(conn));
+				exit(1);
+			}
 			break;
 		}
 	}
@@ -168,6 +178,7 @@ int main(void) {
 	DB_USER, DB_PASS, DB_NAME, 0, NULL, 0)) {
 		fprintf(stderr, "%s\n", mysql_error(conn));
 	}
+
 	MYSQL_RES *res;
 	MYSQL_ROW row;
 	if (mysql_query(conn, TARGET_RECORDS)) {
@@ -178,7 +189,7 @@ int main(void) {
 	while ((row = mysql_fetch_row(res))) {
 		update_meter_rv(conn, row[0], row[1], day_of_week, t);
 		// printf("%s %s\n", row[0], row[1]);
-		break;
+		// break;
 	}
 	mysql_free_result(res);
 	return 0;
