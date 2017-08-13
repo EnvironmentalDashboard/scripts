@@ -1,6 +1,6 @@
 CC=gcc
 # -ggdb3 is for valgrind, -g option is for gdb debugger; remove in production
-CFLAGS=-g -pedantic -std=c99 -Wall -Wextra -ggdb3 -std=gnu11
+CFLAGS=-g -pedantic -std=c99 -Wall -Wextra -ggdb3 -std=gnu11 -Og
 LFLAGS=-lcurl
 MYSQL_CONFIG=`mysql_config --cflags --libs`
 

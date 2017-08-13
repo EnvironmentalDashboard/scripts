@@ -36,6 +36,7 @@ while (true) {
   }
   $bos = new BuildingOS($db, $db->query("SELECT api_id FROM orgs WHERE id = {$meter['org_id']}")->fetchColumn()); // Create an instance of the BuildingOS class that can make calls to the API using the information associated with the org_id
   $bos->updateMeter($meter['id'], $meter['bos_uuid'], $meter['url'] . '/data', $res, $meter_obj);
+  echo "Updating meter {$meter['id']}\n";
   $bos = null; // free for garbage collector
   // $fp = fopen("/root/daemon_logs/{$pid}.log", 'w');
   // fwrite($fp, "Last iteration completed on " . date('F j, Y, g:i a') . "\n\n");
