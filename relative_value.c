@@ -3,13 +3,14 @@
  */
 #define _XOPEN_SOURCE // for strptime
 #define _GNU_SOURCE // for strptime
-#define TARGET_RECORDS "SELECT DISTINCT grouping, meter_uuid FROM relative_values WHERE grouping != '[]' AND grouping != '' AND grouping IS NOT NULL AND permission IS NOT NULL GROUP BY meter_uuid, grouping ORDER BY AVG(last_updated) ASC"
+#define TARGET_RECORDS "SELECT DISTINCT grouping, meter_uuid FROM relative_values WHERE grouping != '[]' AND grouping != '' AND grouping IS NOT NULL AND permission IS NOT NULL AND meter_uuid IN (SELECT bos_uuid FROM meters) GROUP BY meter_uuid, grouping ORDER BY AVG(last_updated) ASC"
 #define CURRENT_READING1 "SELECT AVG(value) FROM meter_data WHERE meter_id = %d AND resolution = 'live' AND recorded >= %d AND value IS NOT NULL"
 #define CURRENT_READING2 "SELECT current FROM meters WHERE id = %d"
 #define TYPICAL_DATA1 "SELECT value FROM meter_data WHERE meter_id = %d AND value IS NOT NULL AND resolution = '%s' AND HOUR(FROM_UNIXTIME(recorded)) = HOUR(NOW()) AND DAYOFWEEK(FROM_UNIXTIME(recorded)) IN (%s) ORDER BY recorded DESC LIMIT %d"
 #define TYPICAL_DATA2 "SELECT value FROM meter_data WHERE meter_id = %d AND value IS NOT NULL AND recorded > %d AND recorded < %d AND resolution = '%s' AND HOUR(FROM_UNIXTIME(recorded)) = HOUR(NOW()) AND DAYOFWEEK(FROM_UNIXTIME(recorded)) IN (%s) ORDER BY value ASC"
 #define ISO8601_FORMAT "%Y-%m-%dT%H:%M:%S-04:00" // EST is -4:00
-#define SMALL_CONTAINER 255
+#define SMALL_CONTAINER 255 // small fixed-size container for arrays
+#define MED_CONTAINER 510 // just double SMALL_CONTAINER
 
 #include <stdio.h>
 #include <string.h>
@@ -68,34 +69,42 @@ float relative_value(float *typical, float current, int size, int min, int max) 
 	return scale(rv, min, max);
 }
 
+/**
+ * does the heavy lifting
+ * @param conn        db connection
+ * @param grouping    json grouping
+ * @param uuid        meter id
+ * @param day_of_week day index
+ * @param t           time_t
+ */
 void update_meter_rv(MYSQL *conn, char *grouping, char *uuid, int day_of_week, time_t t) {
 	MYSQL_RES *res;
 	MYSQL_ROW row;
 	float typical[SMALL_CONTAINER];
-	char query[SMALL_CONTAINER];
-	char day_sql_str[50];
-	sprintf(query, "SELECT id FROM meters WHERE bos_uuid = '%s'", uuid);
+	char query[MED_CONTAINER];
+	char day_sql_str[50]; // goes into TYPICAL_DATA definition query
+	sprintf(query, "SELECT id FROM meters WHERE bos_uuid = '%s'", uuid); // need the meter id as well as uuid
 	if (mysql_query(conn, query)) {
-		// syslog(LOG_ERR, "Error retrieving meter id from database: %s", mysql_error(conn));
+		syslog(LOG_ERR, "Error retrieving meter id from database: %s", mysql_error(conn));
 		return;
 	}
 	res = mysql_store_result(conn);
 	row = mysql_fetch_row(res);
 	if (row == NULL) {
-		// syslog(LOG_ERR, "No meter with uuid: '%s'; Skipping.", uuid);
+		syslog(LOG_ERR, "No meter with uuid: '%s'; Skipping.", uuid);
 		return;
 	}
-	mysql_free_result(res);
 	int meter_id = atoi(row[0]);
+	mysql_free_result(res);
 	cJSON *root = cJSON_Parse(grouping);
 	int k = 0;
 	int typicali = 0;
+	int this_iteration = 0;
 	for (int i = 0; i < cJSON_GetArraySize(root); i++) {
-		int this_iteration = 0;
 		cJSON *subitem = cJSON_GetArrayItem(root, i);
 		cJSON *days = cJSON_GetObjectItem(subitem, "days");
 		int num_days = cJSON_GetArraySize(days);
-		for (int j = 0; j < num_days; j++) {
+		for (int j = 0; j < num_days; j++) { // build the day_sql_str
 			int day_index = cJSON_GetArrayItem(days, j)->valueint;
 			day_sql_str[k++] = day_index + '0'; // https://stackoverflow.com/a/2279401/2624391
 			if (j != num_days - 1) {
@@ -116,42 +125,42 @@ void update_meter_rv(MYSQL *conn, char *grouping, char *uuid, int day_of_week, t
 				sprintf(query, CURRENT_READING2, meter_id);
 			}
 			if (mysql_query(conn, query)) {
-				// syslog(LOG_ERR, "Error retrieving current reading current reading from database: %s", mysql_error(conn));
+				syslog(LOG_ERR, "Error retrieving current reading current reading from database: %s", mysql_error(conn));
 				return;
 			}
 			res = mysql_store_result(conn);
 			row = mysql_fetch_row(res);
-			mysql_free_result(res);
 			if (row == NULL || row[0] == 0x0 || row[0][0] == '\0') {
-				// syslog(LOG_ERR, "Unable to retrieve current reading for meter '%s'; Skipping.", uuid);
+				syslog(LOG_ERR, "Unable to retrieve current reading for meter '%s'; Skipping.", uuid);
 				return;
 			}
 			float current = atof(row[0]);
-			
+			mysql_free_result(res);
 			if (cJSON_HasObjectItem(subitem, "npoints")) {
 				sprintf(query, TYPICAL_DATA1, meter_id, "hour", day_sql_str, cJSON_GetObjectItem(subitem, "npoints")->valueint);
 			} else if (cJSON_HasObjectItem(subitem, "start")) {
 				struct tm ltm = {0};
 				time_t epoch = 0;
 				if (strptime(cJSON_GetObjectItem(subitem, "start")->valuestring, ISO8601_FORMAT, &ltm) != NULL) {
+					ltm.tm_isdst = -1; // Is DST on? 1 = yes, 0 = no, -1 = unknown
 					epoch = mktime(&ltm);
 				} else {
-					// syslog(LOG_ERR, "Unable to parse given date");
+					syslog(LOG_ERR, "Unable to parse given date");
 					return;
 				}
 				sprintf(query, TYPICAL_DATA2, meter_id, (int) epoch, (int) t, "hour", day_sql_str);
 			} else {
-				// syslog(LOG_ERR, "Error parsing relative value configuration");
+				syslog(LOG_ERR, "Error parsing relative value configuration");
 				return;
 			}
 			if (mysql_query(conn, query)) {
-				// syslog(LOG_ERR, "Error retrieving historical data from database: %s", mysql_error(conn));
+				syslog(LOG_ERR, "Error retrieving typical data from database: %s", mysql_error(conn));
 				return;
 			}
 			res = mysql_store_result(conn);
 			row = mysql_fetch_row(res);
 			if (row == NULL) {
-				// syslog(LOG_ERR, "Unable to retrieve historical data for meter '%s'; Skipping.", uuid);
+				syslog(LOG_ERR, "No typical data for meter '%s'; Skipping.", uuid);
 				return;
 			}
 			while ((row = mysql_fetch_row(res))) {
@@ -161,7 +170,7 @@ void update_meter_rv(MYSQL *conn, char *grouping, char *uuid, int day_of_week, t
 			float rv = relative_value(typical, current, typicali, 0, 100);
 			sprintf(query, "UPDATE relative_values SET relative_value = %.3f, last_updated = %d WHERE meter_uuid = '%s' AND grouping = '%s'", rv, (int) t, uuid, grouping);
 			if (mysql_query(conn, query)) {
-				// syslog(LOG_ERR, "Error updating relative value records: %s", mysql_error(conn));
+				syslog(LOG_ERR, "Error updating relative value records: %s", mysql_error(conn));
 				return;
 			}
 			break;
@@ -172,26 +181,26 @@ void update_meter_rv(MYSQL *conn, char *grouping, char *uuid, int day_of_week, t
 int main(void) {
 	openlog("rv_cron", LOG_PID, LOG_CRON);
 	time_t t = time(NULL);
-	int day_of_week = localtime(&t)->tm_wday + 1; // https://dev.mysql.com/doc/refman/5.5/en/date-and-time-functions.html#function_dayofweek
+	// add 1 so the day index matches what mysql expects: https://dev.mysql.com/doc/refman/5.5/en/date-and-time-functions.html#function_dayofweek
+	int day_of_week = localtime(&t)->tm_wday + 1;
 	MYSQL *conn;
 	conn = mysql_init(NULL);
 	// Connect to database
 	if (!mysql_real_connect(conn, DB_SERVER,
 	DB_USER, DB_PASS, DB_NAME, 0, NULL, 0)) {
-		// syslog(LOG_ERR, "Error connecting to database: %s", mysql_error(conn));
-		return 1;
+		syslog(LOG_ERR, "Error connecting to database: %s", mysql_error(conn));
+		return EXIT_FAILURE;
 	}
-
 	MYSQL_RES *res;
 	MYSQL_ROW row;
 	if (mysql_query(conn, TARGET_RECORDS)) {
-		// syslog(LOG_ERR, "Error retrieving relative value records: %s", mysql_error(conn));
-		return 1;
+		syslog(LOG_ERR, "Error retrieving relative value records: %s", mysql_error(conn));
+		return EXIT_FAILURE;
 	}
 	res = mysql_store_result(conn);
 	while ((row = mysql_fetch_row(res))) {
 		update_meter_rv(conn, row[0], row[1], day_of_week, t);
 	}
 	mysql_free_result(res);
-	return 0;
+	return EXIT_SUCCESS;
 }
