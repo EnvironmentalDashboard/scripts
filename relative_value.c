@@ -8,7 +8,7 @@
 #define CURRENT_READING2 "SELECT current FROM meters WHERE id = %d"
 #define TYPICAL_DATA1 "SELECT value FROM meter_data WHERE meter_id = %d AND value IS NOT NULL AND resolution = '%s' AND HOUR(FROM_UNIXTIME(recorded)) = HOUR(NOW()) AND DAYOFWEEK(FROM_UNIXTIME(recorded)) IN (%s) ORDER BY recorded DESC LIMIT %d"
 #define TYPICAL_DATA2 "SELECT value FROM meter_data WHERE meter_id = %d AND value IS NOT NULL AND recorded > %d AND recorded < %d AND resolution = '%s' AND HOUR(FROM_UNIXTIME(recorded)) = HOUR(NOW()) AND DAYOFWEEK(FROM_UNIXTIME(recorded)) IN (%s) ORDER BY value ASC"
-#define ISO8601_FORMAT "%Y-%m-%dT%H:%M:%S-04:00" // EST is -4:00
+#define ISO8601_FORMAT_EST "%Y-%m-%dT%H:%M:%S-04:00" // EST is -4:00
 #define SMALL_CONTAINER 255 // small fixed-size container for arrays
 #define MED_CONTAINER 510 // just double SMALL_CONTAINER
 
@@ -33,7 +33,7 @@ float scale(float pct, int min, int max) {
 }
 
 /**
- * comporator for qsort
+ * comparator for qsort
  */
 int compare(const void *a, const void *b) {
   float fa = *(const float*) a;
@@ -56,7 +56,7 @@ float relative_value(float *typical, float current, int size, int min, int max) 
 		if (typical[i] >= current) {
 			j = i;
 			// If the typical data contains lots of floats that are the same as current,
-			// taking the first occurrance understates the relative value
+			// taking the first occurrence understates the relative value
 			// This happens often with water meters that are usually 0 (so the typical has a lot of 0s) and the current reading is also 0
 			while (j != (size - 1) && current == typical[++j]) {
 				++k; // count how many values are the same 
@@ -64,7 +64,7 @@ float relative_value(float *typical, float current, int size, int min, int max) 
 			break;
 		}
 	}
-	float adjusted_i = i + (k/2); // move the index halfway between the flatlined data
+	float adjusted_i = i + (k/2); // move the index halfway between the flat-lined data
 	float rv = (adjusted_i / (size+1)) * 100; // index / the size [add 1 bc I'm counting the current point as part of the typical data array]) * 100
 	return scale(rv, min, max);
 }
@@ -97,13 +97,13 @@ void update_meter_rv(MYSQL *conn, char *grouping, char *uuid, int day_of_week, t
 	int meter_id = atoi(row[0]);
 	mysql_free_result(res);
 	cJSON *root = cJSON_Parse(grouping);
-	int k = 0;
 	int typicali = 0;
 	int this_iteration = 0;
 	for (int i = 0; i < cJSON_GetArraySize(root); i++) {
 		cJSON *subitem = cJSON_GetArrayItem(root, i);
 		cJSON *days = cJSON_GetObjectItem(subitem, "days");
 		int num_days = cJSON_GetArraySize(days);
+		int k = 0;
 		for (int j = 0; j < num_days; j++) { // build the day_sql_str
 			int day_index = cJSON_GetArrayItem(days, j)->valueint;
 			day_sql_str[k++] = day_index + '0'; // https://stackoverflow.com/a/2279401/2624391
@@ -139,9 +139,12 @@ void update_meter_rv(MYSQL *conn, char *grouping, char *uuid, int day_of_week, t
 			if (cJSON_HasObjectItem(subitem, "npoints")) {
 				sprintf(query, TYPICAL_DATA1, meter_id, "hour", day_sql_str, cJSON_GetObjectItem(subitem, "npoints")->valueint);
 			} else if (cJSON_HasObjectItem(subitem, "start")) {
+				/**
+				 * TODO: test that groupings with a 'start' parameter works. most (all?) groupings use npoints anyways tho
+				 */
 				struct tm ltm = {0};
 				time_t epoch = 0;
-				if (strptime(cJSON_GetObjectItem(subitem, "start")->valuestring, ISO8601_FORMAT, &ltm) != NULL) {
+				if (strptime(cJSON_GetObjectItem(subitem, "start")->valuestring, ISO8601_FORMAT_EST, &ltm) != NULL) {
 					ltm.tm_isdst = -1; // Is DST on? 1 = yes, 0 = no, -1 = unknown
 					epoch = mktime(&ltm);
 				} else {
