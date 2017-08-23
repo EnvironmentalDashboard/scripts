@@ -99,6 +99,7 @@ void update_meter_rv(MYSQL *conn, char *grouping, char *uuid, int day_of_week, t
 	cJSON *root = cJSON_Parse(grouping);
 	int typicali = 0;
 	int this_iteration = 0;
+	int try_again = 0;
 	for (int i = 0; i < cJSON_GetArraySize(root); i++) {
 		cJSON *subitem = cJSON_GetArrayItem(root, i);
 		cJSON *days = cJSON_GetObjectItem(subitem, "days");
@@ -121,6 +122,7 @@ void update_meter_rv(MYSQL *conn, char *grouping, char *uuid, int day_of_week, t
 			if (cJSON_HasObjectItem(subitem, "minsAveraged")) {
 				int secsAveraged = cJSON_GetObjectItem(subitem, "minsAveraged")->valueint * 60;
 				sprintf(query, CURRENT_READING1, meter_id, (int) t-secsAveraged);
+				try_again = 1;
 			} else {
 				sprintf(query, CURRENT_READING2, meter_id);
 			}
@@ -130,9 +132,21 @@ void update_meter_rv(MYSQL *conn, char *grouping, char *uuid, int day_of_week, t
 			}
 			res = mysql_store_result(conn);
 			row = mysql_fetch_row(res);
-			if (row == NULL || row[0] == 0x0 || row[0][0] == '\0') {
-				syslog(LOG_ERR, "Unable to retrieve current reading for meter '%s'; Skipping.", uuid);
-				return;
+			if (row == NULL || row[0] == 0x0) {
+				mysql_free_result(res);
+				if (try_again) {
+					sprintf(query, CURRENT_READING2, meter_id);
+					if (mysql_query(conn, query)) {
+						syslog(LOG_ERR, "Error retrieving current reading current reading from database: %s", mysql_error(conn));
+						return;
+					}
+					res = mysql_store_result(conn);
+					row = mysql_fetch_row(res);
+				}
+				if (row == NULL || row[0] == 0x0) {
+					syslog(LOG_ERR, "Unable to retrieve current reading for meter '%s'; Skipping.", uuid);
+					return;
+				}
 			}
 			float current = atof(row[0]);
 			mysql_free_result(res);
