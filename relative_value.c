@@ -80,7 +80,7 @@ float relative_value(float *typical, float current, int size, int min, int max) 
 void update_meter_rv(MYSQL *conn, char *grouping, char *uuid, int day_of_week, time_t t) {
 	MYSQL_RES *res;
 	MYSQL_ROW row;
-	float typical[SMALL_CONTAINER];
+	float typical[SMALL_CONTAINER] = {0};
 	char query[MED_CONTAINER];
 	char day_sql_str[50]; // goes into TYPICAL_DATA definition query
 	sprintf(query, "SELECT id FROM meters WHERE bos_uuid = '%s'", uuid); // need the meter id as well as uuid
