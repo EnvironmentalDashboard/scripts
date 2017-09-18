@@ -8,10 +8,88 @@
 	<meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT" />
 	<meta http-equiv="pragma" content="no-cache" />
 	<title>Document</title>
+	<style>
+body {
+  font-family: "Open Sans", sans-serif;
+  line-height: 1.25;
+}
+table {
+  border: 1px solid #ccc;
+  border-collapse: collapse;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  table-layout: fixed;
+}
+table caption {
+  font-size: 1.5em;
+  margin: .5em 0 .75em;
+}
+table tr {
+  background: #f8f8f8;
+  border: 1px solid #ddd;
+  padding: .35em;
+}
+table th,
+table td {
+  padding: .625em;
+  text-align: center;
+}
+table th {
+  font-size: .85em;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+@media screen and (max-width: 600px) {
+  table {
+    border: 0;
+  }
+  table caption {
+    font-size: 1.3em;
+  }
+  table thead {
+    border: none;
+    clip: rect(0 0 0 0);
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    padding: 0;
+    position: absolute;
+    width: 1px;
+  }
+  table tr {
+    border-bottom: 3px solid #ddd;
+    display: block;
+    margin-bottom: .625em;
+  }
+  table td {
+    border-bottom: 1px solid #ddd;
+    display: block;
+    font-size: .8em;
+    text-align: right;
+  }
+  table td:before {
+    /*
+    * aria-label has no advantage, it won't be read inside a table
+    content: attr(aria-label);
+    */
+    content: attr(data-label);
+    float: left;
+    font-weight: bold;
+    text-transform: uppercase;
+  }
+  table td:last-child {
+    border-bottom: 0;
+  }
+}
+	</style>
 </head>
-<body style="margin: 0px;padding: 0px;height: 100%">
+<body style="margin: 0px;padding: 0px;height: 100%;margin-right: 5vw;margin-left: 5vw;padding-bottom: 10vw;">
 <?php
 require '../includes/db.php';
+require '../includes/class.Meter.php';
+error_reporting(-1);
+ini_set('display_errors', 'On');
 define('DATA_OK', 0); // green
 define('DATA_NULL', 1); // orange
 define('DATA_MISSING', 2); // red
@@ -41,6 +119,7 @@ $status = array();
 $stmt = $db->prepare('SELECT id, value, recorded FROM meter_data WHERE meter_id = ? AND resolution = ? AND recorded >= ? ORDER BY recorded ASC');
 $stmt->execute(array($_GET['meter_id'], $_GET['res'], $start));
 $data = $stmt->fetchAll();
+$count = count($data);
 $i = 0;
 // while ($start > $data[$i++]['recorded']); // advance index to first point required by data
 while ($start < $time) {
@@ -63,6 +142,9 @@ while ($start < $time) {
 			}
 		}
 		$i++;
+		if ($i === $count) {
+			break;
+		}
 	}
 	$start += $increment;
 }
@@ -99,16 +181,31 @@ if (!isset($_GET['view']) || $_GET['view'] === 'gradient') {
   <tbody>';
   // $values = array_column($data, 'value', 'id');
   // $times = array_column($data, 'recorded', 'id');
+  $typical = array();
   for ($j = 0; $j < count($expected_time); $j++) { 
   	echo "<tr><th scope='row'>";
   	echo date('n/j/y g:i.s a', $expected_time[$j]);
   	echo "</th><td>";
   	echo ($status[$j] === DATA_MISSING) ? 'None' : date('n/j/y g:i.s a', $actual_time[$j]);
   	echo ($status[$j] === DATA_MISSING || $status[$j] === DATA_NULL) ? "</td><td>NULL</td>" : "</td><td>{$value[$j]}</td>";
-  	echo ($status[$j] === RV_DATA) ? "<td>Yes</td>" : "<td>No</td>";
+  	if ($status[$j] === RV_DATA) {
+  		echo "<td>Yes</td>";
+  		$typical[] = $value[$j];
+  	} else {
+  		echo "<td>No</td>";
+  	}
     echo "</tr>";
   }
   echo '</tbody></table>';
+  if ($_GET['res'] === 'hour') {
+  	$stmt = $db->prepare('SELECT current FROM meters WHERE id = ?');
+	  $stmt->execute(array($_GET['meter_id']));
+	  $current = $stmt->fetchColumn();
+	  $meter = new Meter($db);
+	  $rv = $meter->relativeValue($typical, $current);
+	  sort($typical);
+	  echo "<h3>Relative value calculation</h3><p>Current: {$current}</p><p>Typical data: ".implode(', ', $typical)."</p><p>Relative value: {$rv}</p>";
+  }
 }
 // print_r($processed_data);
 // $image = new Imagick();
