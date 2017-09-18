@@ -65,7 +65,7 @@ float relative_value(float *typical, float current, int size, int min, int max) 
 		}
 	}
 	float adjusted_i = i + (k/2); // move the index halfway between the flat-lined data
-	float rv = (adjusted_i / (size+1)) * 100; // index / the size [add 1 bc I'm counting the current point as part of the typical data array]) * 100
+	float rv = (adjusted_i / (size)) * 100;
 	return scale(rv, min, max);
 }
 
