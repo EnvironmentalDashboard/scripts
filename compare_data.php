@@ -1,8 +1,8 @@
 <?php
 require '../includes/db.php';
 require '../includes/class.BuildingOS.php';
-$meter_id = 515;
-$meter_url = 'https://api.buildingos.com/meters/f687109e131911e698ce525400e84168/data';
+$meter_id = 455;
+$meter_url = 'https://api.buildingos.com/meters/oberlin_jhouse_main_e/data';
 $res = 'quarterhour';
 $api_id = 1;
 $from = strtotime('-2 hours');
