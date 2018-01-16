@@ -1,6 +1,8 @@
 <?php
+error_reporting(-1);
+ini_set('display_errors', 'On');
 require '../includes/db.php';
-if (isset($_POST['uuid'])) {
+if (isset($_POST['submit'])) {
 	if ($_POST['id_type'] === 'uuid') {
 		$uuid = $_POST['id'];
 		$stmt = $db->prepare('SELECT id FROM meters WHERE bos_uuid = ?');
@@ -16,8 +18,8 @@ if (isset($_POST['uuid'])) {
 	$stmt->execute(array($id, 'live'));
 	$stmt = $db->prepare('UPDATE meters SET quarterhour_last_updated = -1, hour_last_updated = -1 WHERE bos_uuid = ?');
 	$stmt->execute(array($uuid));
-	exec('bash -c "exec nohup setsid /var/www/html/oberlin/daemons/buildingosd -dot -rquarterhour > /dev/null 2>&1 &"');
-	exec('bash -c "exec nohup setsid /var/www/html/oberlin/daemons/buildingosd -dot -rhour > /dev/null 2>&1 &"');
+	exec('bash -c "exec nohup setsid /var/www/html/oberlin/daemons/buildingosd -do -rquarterhour > /dev/null 2>&1 &"');
+	exec('bash -c "exec nohup setsid /var/www/html/oberlin/daemons/buildingosd -do -rhour > /dev/null 2>&1 &"');
 	$success = true;
 } else {
 	$success = false;
@@ -31,13 +33,13 @@ if (isset($_POST['uuid'])) {
 </head>
 <body>
 	<?php if ($success) {
-		echo "<p>Updated meter {$_POST['uuid']}</p>";
+		echo "<p>Updated meter {$uuid}</p>";
 	} ?>
 	<form action="" method="POST">
 		<input type="radio" name="id_type" value="uuid" checked>BuildingOS meter ID<br>
 		<input type="radio" name="id_type" value="id">Dashboard meter ID<br>
 		<input type="text" name="id" placeholder="ID">
-		<input type="submit">
+		<input type="submit" name="submit" value="Update meter">
 	</form>
 </body>
 </html>
