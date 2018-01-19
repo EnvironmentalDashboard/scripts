@@ -11,14 +11,14 @@ foreach ($db->query("SELECT id FROM meters WHERE source = 'buildingos' AND ((gau
 	$stmt->execute([$meter['id'], $res, $recorded]);
 	if ($stmt->rowCount() === 0) {
 		syslog(LOG_WARNING, "Can not calculate hour data for meter {$meter['id']}; No data exists from {$recorded} to {$time}");
-		$stmt = $db->prepare("INSERT INTO meter_data (meter_id, value, recorded, resolution) VALUES (?, ?, ?, ?)");
+		$stmt = $db->prepare("REPLACE INTO meter_data (meter_id, value, recorded, resolution) VALUES (?, ?, ?, ?)");
 		$stmt->execute([$meter['id'], null, $recorded, $res]);
 	} else {
 		$arr = [];
 		foreach ($stmt->fetchAll() as $row) {
 			$arr[] = $row['value'];
 		}
-		$stmt = $db->prepare("INSERT INTO meter_data (meter_id, value, recorded, resolution) VALUES (?, ?, ?, ?)");
+		$stmt = $db->prepare("REPLACE INTO meter_data (meter_id, value, recorded, resolution) VALUES (?, ?, ?, ?)");
 		$avg = array_sum($arr)/count($arr);
 		$stmt->execute([$meter['id'], $avg, $recorded, $res]);
 	}
