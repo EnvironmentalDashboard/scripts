@@ -18,8 +18,8 @@ if (isset($_POST['submit'])) {
 	$stmt->execute(array($id, 'live'));
 	$stmt = $db->prepare('UPDATE meters SET quarterhour_last_updated = -1, hour_last_updated = -1 WHERE bos_uuid = ?');
 	$stmt->execute(array($uuid));
-	// exec('bash -c "exec nohup setsid /var/www/repos/daemons/buildingosd -do -rquarterhour > /dev/null 2>&1 &"');
-	// exec('bash -c "exec nohup setsid /var/www/repos/daemons/buildingosd -do -rhour > /dev/null 2>&1 &"');
+	exec('bash -c "exec nohup setsid /var/www/repos/daemons/buildingosd -do -rquarterhour > /dev/null 2>&1 &"');
+	exec('bash -c "exec nohup setsid /var/www/repos/daemons/buildingosd -do -rhour > /dev/null 2>&1 &"');
 	$success = true;
 } else {
 	$success = false;
