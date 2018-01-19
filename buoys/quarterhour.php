@@ -1,7 +1,7 @@
 <?php
 #!/usr/local/bin/php
 // This script calculates quarterhour data for meters 1906-1960
-// Run with */15 * * * * php /var/www/html/oberlin/scripts/buoys/quarterhour.php
+// Run with */15 * * * * php /var/www/repos/scripts/buoys/quarterhour.php
 date_default_timezone_set('America/New_York');
 // floor time to nearest 10 to get recorded values that are exactly on the 15 min mark in case some lag when starting script
 $time = floor((time()) / 10) * 10; // https://stackoverflow.com/a/1619284/2624391

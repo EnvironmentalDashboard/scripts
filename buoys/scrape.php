@@ -2,7 +2,7 @@
 #!/usr/local/bin/php
 // This script scrapes data from the buoys page every 2 mins and inserts the data into the meter_data table
 // Other resolutions are calculated by quarterhour.php, hour.php, month.php
-// Run with */2 * * * * php /var/www/html/oberlin/scripts/buoys/scrape.php
+// Run with */2 * * * * php /var/www/repos/scripts/buoys/scrape.php
 chdir(__DIR__);
 require '../../includes/db.php';
 date_default_timezone_set('America/New_York');

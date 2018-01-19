@@ -22,7 +22,7 @@ if ($ok) {
   $user_id = $db->lastInsertId();
   $bos = new BuildingOS($db, $api_id);
   $bos->populateDB($user_id); // Retrieve buildings/meters from BuildingOS API
-  shell_exec('ln -s /var/www/html/oberlin '.escapeshellarg("/var/www/html/{$options['name']}")); // Create new symlink
+  shell_exec('ln -s /var/www/repos '.escapeshellarg("/var/www/html/{$options['name']}")); // Create new symlink
   $db->exec("INSERT INTO cwd_bos (user_id, squirrel, fish, water_speed, electricity_speed, landing_messages, electricity_messages, gas_messages, stream_messages, water_messages, weather_messages) SELECT {$user_id}, squirrel, fish, water_speed, electricity_speed, landing_messages, electricity_messages, gas_messages, stream_messages, water_messages, weather_messages FROM cwd_bos WHERE user_id = 1");
   $db->exec("INSERT INTO cwd_landscape_components (user_id, component, pos, widthxheight, title, link, img, `text`, text_pos, `order`, removable, hidden) SELECT {$user_id}, component, pos, widthxheight, title, link, img, `text`, text_pos, `order`, removable, hidden FROM cwd_landscape_components WHERE user_id = 1");
   $db->exec("INSERT INTO cwd_messages (user_id, resource, message, prob1, prob2, prob3, prob4, prob5) SELECT {$user_id}, resource, message, prob1, prob2, prob3, prob4, prob5 FROM cwd_messages WHERE user_id = 1");
