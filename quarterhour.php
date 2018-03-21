@@ -6,7 +6,7 @@ $time = time();
 $res = 'quarterhour';
 $end = floor(($time - 900) / 10) * 10; // 15 mins ago (exactly because rounded down)
 $start = $end - 900; // 30 mins ago
-openlog('15min', LOG_PID | LOG_ODELAY, LOG_CRON);
+openlog($res, LOG_PID | LOG_ODELAY, LOG_CRON);
 foreach ($db->query("SELECT id FROM meters WHERE source = 'buildingos' AND (id IN (SELECT meter_id FROM saved_chart_meters) OR id IN (SELECT meter_id FROM gauges) OR bos_uuid IN (SELECT elec_uuid FROM orbs) OR bos_uuid IN (SELECT water_uuid FROM orbs) OR bos_uuid IN (SELECT DISTINCT meter_uuid FROM relative_values WHERE permission = 'orb_server' AND meter_uuid != ''))") as $meter) {
 	$stmt = $db->prepare('SELECT value FROM meter_data WHERE meter_id = ? AND value IS NOT NULL AND resolution = ? AND recorded >= ? AND recorded <= ?');
 	$stmt->execute([$meter['id'], 'live', $start, $end]);
