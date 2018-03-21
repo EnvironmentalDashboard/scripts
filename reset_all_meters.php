@@ -5,8 +5,8 @@ foreach ($db->query("SELECT id FROM meters WHERE source = 'buildingos' AND (id I
   $stmt->execute(array($row['id']));
   $stmt = $db->prepare('DELETE FROM meter_data WHERE meter_id = ? AND (resolution = ? OR resolution = ?)');
   $stmt->execute(array($row['id'], 'quarterhour', 'hour'));
-  exec('bash -c "exec nohup setsid /var/www/repos/daemons/buildingosd -dot -rquarterhour > /dev/null 2>&1 &"');
-  exec('bash -c "exec nohup setsid /var/www/repos/daemons/buildingosd -dot -rhour > /dev/null 2>&1 &"');
+  exec('bash -c "exec nohup setsid /var/repos/daemons/buildingosd -dot -rquarterhour > /dev/null 2>&1 &"');
+  exec('bash -c "exec nohup setsid /var/repos/daemons/buildingosd -dot -rhour > /dev/null 2>&1 &"');
   sleep(4);
 }
 ?>
