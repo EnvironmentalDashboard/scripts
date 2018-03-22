@@ -9,18 +9,30 @@ foreach ($db->query("SELECT id FROM meters WHERE source = 'buildingos' AND (id I
   $quarterhour_points = $stmt->fetchColumn();
   // if more than 30% of the data is NULL/nonexistant
   if ($quarterhour_points < (1344 * 0.7)) { // 1344 = # of quarterhour periods in 2 weeks
-  	$stmt = $db->prepare('UPDATE meters SET quarterhour_last_updated = -1, hour_last_updated = -1 WHERE id = ?');
-	  $stmt->execute(array($row['id']));
-	  exec('bash -c "exec nohup setsid /var/repos/daemons/buildingosd -dot -rquarterhour > /dev/null 2>&1 &"');
-	  sleep(2);
-	  echo "Meter {$row['id']} only has {$quarterhour_points}, 1344 expected\n";
+  	echo "Meter {$row['id']} only has {$quarterhour_points}, 1344 expected\n";
+  	try {
+  		$stmt = $db->prepare('UPDATE meters SET quarterhour_last_updated = -1, hour_last_updated = -1 WHERE id = ?');
+		  $stmt->execute(array($row['id']));
+		  $stmt = $db->prepare('DELETE FROM meter_data WHERE meter_id = ? AND (resolution = ? OR resolution = ?)');
+		  $stmt->execute(array($row['id'], 'quarterhour', 'hour'));
+		  exec('bash -c "exec nohup setsid /var/repos/daemons/buildingosd -dot -rquarterhour > /dev/null 2>&1 &"');
+		  sleep(2);
+  	} catch (PDOException $e) {
+  		echo $e->getMessage();
+  	}
   }
   if ($hour_points < (1460 * 0.7)) { // 1460 = # of hours in 2 months
-  	$stmt = $db->prepare('DELETE FROM meter_data WHERE meter_id = ? AND (resolution = ? OR resolution = ?)');
-	  $stmt->execute(array($row['id'], 'quarterhour', 'hour'));
-	  exec('bash -c "exec nohup setsid /var/repos/daemons/buildingosd -dot -rhour > /dev/null 2>&1 &"');
-	  sleep(2);
-	  echo "Meter {$row['id']} only has {$hour_points}, 1460 expected\n";
+  	echo "Meter {$row['id']} only has {$hour_points}, 1460 expected\n";
+  	try {
+  		$stmt = $db->prepare('UPDATE meters SET quarterhour_last_updated = -1, hour_last_updated = -1 WHERE id = ?');
+		  $stmt->execute(array($row['id']));
+		  $stmt = $db->prepare('DELETE FROM meter_data WHERE meter_id = ? AND (resolution = ? OR resolution = ?)');
+		  $stmt->execute(array($row['id'], 'quarterhour', 'hour'));
+		  exec('bash -c "exec nohup setsid /var/repos/daemons/buildingosd -dot -rquarterhour > /dev/null 2>&1 &"');
+		  sleep(2);
+  	} catch (PDOException $e) {
+  		echo $e->getMessage();
+  	}
   }
 }
 ?>
