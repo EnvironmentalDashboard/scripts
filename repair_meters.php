@@ -1,6 +1,6 @@
 <?php
 require '/var/www/repos/includes/db.php';
-foreach ($db->query("SELECT id FROM meters WHERE source = 'buildingos' AND (id IN (SELECT meter_id FROM saved_chart_meters) OR id IN (SELECT meter_id FROM gauges) OR bos_uuid IN (SELECT elec_uuid FROM orbs) OR bos_uuid IN (SELECT water_uuid FROM orbs) OR bos_uuid IN (SELECT DISTINCT meter_uuid FROM relative_values WHERE permission = 'orb_server' AND meter_uuid != ''))") as $row) {
+foreach ($db->query("SELECT id FROM meters WHERE source = 'buildingos' AND (id IN (SELECT meter_id FROM saved_chart_meters) OR id IN (SELECT meter_id FROM gauges) OR bos_uuid IN (SELECT elec_uuid FROM orbs) OR bos_uuid IN (SELECT water_uuid FROM orbs) OR bos_uuid IN (SELECT meter_uuid FROM relative_values WHERE permission = 'orb_server' AND meter_uuid != ''))") as $row) {
 	$stmt = $db->prepare('SELECT COUNT(*) FROM meter_data WHERE meter_id = ? AND resolution = ? AND value IS NOT NULL');
   $stmt->execute(array($row['id'], 'hour'));
   $hour_points = $stmt->fetchColumn();
