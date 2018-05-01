@@ -6,8 +6,8 @@
 </head>
 <body>
 	<form action="" method="POST" id="form">
-		<input type="text" name="v" id="v" value="10,30,50,70,90">
-		<input type="text" name="t" id="t" value="10">
+		<input type="text" name="v" id="v" value="0,1,2,3,4">
+		<input type="text" name="t" id="t" value="12">
 		<input type="submit">
 	</form>
 	<p id="status"></p>
@@ -17,10 +17,15 @@
 	form.on('submit', function(e) {
 		e.preventDefault();
 		var v = $('#v').val();
+		var vals = v.split(",");
+		for (var i = vals.length - 1; i >= 0; i--) {
+			vals[i] = convertRange(vals[i], 0, 4, 0, 100);
+		}
 		var t = $('#t').val();
 		var http = new XMLHttpRequest();
 		var url = "backend.php";
-		var params = "v="+v+"&t=" + t;
+		var params = "v="+JSON.stringify(vals)+"&t=" + t;
+		console.log(params);
 		http.open("POST", url, true);
 		http.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
 		http.onreadystatechange = function() {
@@ -30,8 +35,14 @@
 	    }
 		}
 		http.send(params);
-		$('#status').text('Orb currently cycling through relative values: ' + v + '; will be done in ' + (t*5) + ' seconds.');
+		$('#status').text('Orb currently cycling through relative values: ' + JSON.stringify(vals) + '; will be done in ' + (t*vals.length) + ' seconds.');
 	});
+	function convertRange(val, old_min, old_max, new_min, new_max) {
+	  if (old_max == old_min) {
+	    return 0;
+	  }
+	  return (((new_max - new_min) * (val - old_min)) / (old_max - old_min)) + new_min;
+	}
 </script>
 </body>
 </html>
