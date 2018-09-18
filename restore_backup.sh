@@ -7,7 +7,7 @@ sudo apt-clone restore pckgs.apt-clone.tar.gz # this will reinstall all packages
 
 cat crontab | crontab -
 
-mkdir -P /var/www/uploads/
+mkdir -p /var/www/uploads/
 mkdir /var/www/repos
 mkdir /var/repos
 
