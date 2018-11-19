@@ -55,15 +55,19 @@ foreach ($buoys as $buoy => &$meters) {
 			if ($cur_var_name === 'time') { // time is always as the top so it should be available
 				$times = array_map('floatval', explode(',', $line));
 			}
-			foreach ($data as $i => $value) {
+			foreach (explode(',', $line) as $i => $value) {
 				foreach ($meters as $meter) {
 					if ($meter['var_name'] === $cur_var_name) {
 						$cur_meter_id = $meter['id'];
 						break;
 					}
 				}
-				$stmt = $db->prepare('REPLACE INTO meter_data (meter_id, value, recorded, resolution) VALUES (?, ?, ?, ?)');
-				$stmt->execute([$cur_meter_id, $value, $times[$i] + OFFSET_TIME, 'live']);
+				try {
+					$stmt = $db->prepare('REPLACE INTO meter_data (meter_id, value, recorded, resolution) VALUES (?, ?, ?, ?)');
+					$stmt->execute([$cur_meter_id, ($value === -9999.0) ? null : $value, $times[$i] + OFFSET_TIME, 'live']); // -9999 is an error value
+				} catch (PDOException $e) {
+					echo "Error inserting value for meter {$cur_meter_id}: " . $e->getMessage();
+				}
 			}
 		}
 	}
