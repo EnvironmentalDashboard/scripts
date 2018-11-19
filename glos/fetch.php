@@ -1,4 +1,5 @@
 <?php
+require '../../includes/db.php';
 define('OFFSET_TIME', 978307200); // # of seconds between 1/1/1970 0:00 GMT and 1/1/2001 0:00 GMT
 define('STORAGE_DURATION', 259200); // at most we store 3 days of "live" data
 define('TARGET_BUOYS', ['45176']);
@@ -22,8 +23,8 @@ foreach ($buoys as $buoy => &$meters) {
 			$stmt->execute([$meter_name]);
 			$id = $stmt->fetchColumn();
 			if ($id == false) { // create new meter; test probably equivalent to $last_readings === false
-				$stmt = $db->prepare('INSERT INTO meters (building_id, source, scope, resource, name, calculated) VALUES (?, ?, ?, ?, ?, ?)');
-				$stmt->execute([1, 'glos', 'Other', 'Undefined', $meter_name, 1]);
+				$stmt = $db->prepare('INSERT INTO meters (building_id, source, scope, resource, name, calculated, units) VALUES (?, ?, ?, ?, ?, ?, ?)');
+				$stmt->execute([1, 'glos', 'Other', 'Undefined', $meter_name, 1, '']);
 				$id = $db->lastInsertId();
 			}
 			$cur_data_index = intval($parts[7]);
@@ -61,7 +62,7 @@ foreach ($buoys as $buoy => &$meters) {
 						break;
 					}
 				}
-				$stmt = $db->prepare('INSERT INTO meter_data (meter_id, value, recorded, resolution) VALUES (?, ?, ?, ?)');
+				$stmt = $db->prepare('REPLACE INTO meter_data (meter_id, value, recorded, resolution) VALUES (?, ?, ?, ?)');
 				$stmt->execute([$cur_meter_id, $value, $times[$i] + OFFSET_TIME, 'live']);
 			}
 		}
