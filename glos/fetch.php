@@ -68,6 +68,8 @@ foreach ($buoys as $buoy => &$meters) {
 						break;
 					}
 				}
+				$cur_meter_id = intval($cur_meter_id);
+				$value = floatval($value);
 				$new_row = [$cur_meter_id, ($value === -9999.0) ? null : $value, $times[$i] + OFFSET_TIME, 'live']; // -9999 is an error value
 				try {
 					$stmt = $db->prepare('REPLACE INTO meter_data (meter_id, value, recorded, resolution) VALUES (?, ?, ?, ?)');
