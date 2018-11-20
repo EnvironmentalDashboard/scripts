@@ -7,6 +7,8 @@ define('CACHE_FN', 'last_readings');
 date_default_timezone_set('America/New_York');
 
 $time = time();
+$options = getopt('v:');
+$verbose = ($options['v'] === '1') ? true : false;
 $buoys = array_fill_keys(TARGET_BUOYS, []);
 $new_last_readings = array_fill_keys(TARGET_BUOYS, []);
 $last_readings = (file_exists(CACHE_FN)) ? unserialize(file_get_contents(CACHE_FN)) : false;
@@ -26,6 +28,9 @@ foreach ($buoys as $buoy => &$meters) {
 				$stmt = $db->prepare('INSERT INTO meters (building_id, source, scope, resource, name, calculated, units) VALUES (?, ?, ?, ?, ?, ?, ?)');
 				$stmt->execute([1, 'glos', 'Other', 'Undefined', $meter_name, 1, '']);
 				$id = $db->lastInsertId();
+				if ($verbose) {
+					echo "Creating new meter {$meter_name}\n";
+				}
 			}
 			$cur_data_index = intval($parts[7]);
 			$meters[] = [
@@ -54,6 +59,7 @@ foreach ($buoys as $buoy => &$meters) {
 		} else {
 			if ($cur_var_name === 'time') { // time is always as the top so it should be available
 				$times = array_map('floatval', explode(',', $line));
+				continue; // dont actually want to insert times into db
 			}
 			foreach (explode(',', $line) as $i => $value) {
 				foreach ($meters as $meter) {
@@ -62,11 +68,17 @@ foreach ($buoys as $buoy => &$meters) {
 						break;
 					}
 				}
+				$new_row = [$cur_meter_id, ($value === -9999.0) ? null : $value, $times[$i] + OFFSET_TIME, 'live']; // -9999 is an error value
 				try {
 					$stmt = $db->prepare('REPLACE INTO meter_data (meter_id, value, recorded, resolution) VALUES (?, ?, ?, ?)');
-					$stmt->execute([$cur_meter_id, ($value === -9999.0) ? null : $value, $times[$i] + OFFSET_TIME, 'live']); // -9999 is an error value
-				} catch (PDOException $e) {
-					echo "Error inserting value for meter {$cur_meter_id}: " . $e->getMessage();
+					$stmt->execute($new_row);
+					if ($verbose) {
+						echo "Inserting " . json_encode($new_row) . "\n";
+					}
+				} catch (PDOException $e) { // if value is out of range
+					if ($verbose) {
+						echo $e->getMessage() . ': ' . json_encode($new_row) . "\n";
+					}
 				}
 			}
 		}
