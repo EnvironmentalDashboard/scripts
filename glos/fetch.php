@@ -2,7 +2,7 @@
 require '../../includes/db.php';
 define('OFFSET_TIME', 978307200); // # of seconds between 1/1/1970 0:00 GMT and 1/1/2001 0:00 GMT
 define('STORAGE_DURATION', 259200); // at most we store 3 days of "live" data
-define('TARGET_BUOYS', ['45176']);
+define('TARGET_BUOYS', ['leelyria', 'leavon', 'lementor', '45176']);
 define('CACHE_FN', 'last_readings');
 date_default_timezone_set('America/New_York');
 
@@ -32,11 +32,11 @@ foreach ($buoys as $buoy => &$meters) {
 					echo "Creating new meter {$meter_name}\n";
 				}
 			}
-			$cur_data_index = intval($parts[7]);
+			$cur_data_index = intval($parts[7]) - 1; // its 0-based but not returned like that from glos...
 			$meters[] = [
 				'var_name' => $var_name,
-				'cur_reading' => $cur_data_index - 1, // its 0-based but not returned like that from glos...
-				'last_reading' => ($last_readings) ? $last_readings[$buoy][$var_name] : 0,
+				'cur_reading' => $cur_data_index,
+				'last_reading' => ($last_readings && isset($last_readings[$buoy][$var_name])) ? $last_readings[$buoy][$var_name] : 0,
 				'id' => $id
 			];
 			$new_last_readings[$buoy][$var_name] = $cur_data_index;
@@ -44,9 +44,14 @@ foreach ($buoys as $buoy => &$meters) {
 	}
 	$params = [];
 	foreach ($meters as $meter) { // go back over meters and actually fetch data
-		$params[] = "{$meter['var_name']}[{$meter['last_reading']}:1:{$meter['cur_reading']}]";
+		if ($meter['last_reading'] < $meter['cur_reading']) {
+			$params[] = "{$meter['var_name']}[{$meter['last_reading']}:1:{$meter['cur_reading']}]";
+		}
 	}
-	$url = "http://tds.glos.us/thredds/dodsC/buoy_agg_standard/45176/45176.ncml.ascii?" . rawurlencode(implode(',', $params));
+	if (empty($params)) { // none of the meters on this buoy need updating
+		continue;
+	}
+	$url = "http://tds.glos.us/thredds/dodsC/buoy_agg_standard/{$buoy}/{$buoy}.ncml.ascii?" . rawurlencode(implode(',', $params));
 	$cur_var_name = '';
 	$cur_meter_id = 'ERROR';
 	$times = [];
