@@ -1,9 +1,10 @@
 <?php
 require '../../includes/db.php';
 require 'key.php';
+date_default_timezone_set('America/New_York');
 
 $url = "http://www.airnowapi.org/aq/observation/zipCode/current/?format=text/csv&zipCode=44074&distance=25&API_KEY={$api_key}";
-$data = array_map('str_getcsv', file_get_contents($url));
+$data = array_map('str_getcsv', file($url));
 for ($i = 1; $i < count($data); $i++) { // first row is header; skip
 	$time = strtotime($data[$i][0] . $data[$i][1] . ':00:00');
 	$val = floatval($data[$i][8]);
