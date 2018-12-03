@@ -8,15 +8,15 @@
 
 while read line
 do
-	res=`find . -name $line`
-	if [[ ! -z "$res" ]]; then # if not empty string
-		if [[ wc -l "$res" -eq 1 ]]; then # only 1 file found
-			printf "Moving $res to server\n"
-			printf "scp -r $res" "root@159.89.232.129:$1"
-		else
-			printf "Multiple files:\n$res"
-		fi
+	argumentArray=(. -name "$line")
+	res=`find "${argumentArray[@]}"` # the exact location of file in backup folders based on name
+	lns=`echo "$res" | wc -l`
+	if [ $lns -eq 1 ]; then # only 1 file found
+		printf "$res => $1\n"
+		argumentArray=("$res" "root@159.89.232.129:$1")
+		scp "${argumentArray[@]}"
+	else
+		printf "Multiple files:\n$res"
 	fi
 done < /dev/stdin
 
-echo $1
