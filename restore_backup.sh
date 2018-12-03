@@ -1,4 +1,6 @@
 #!/bin/bash
+# this script is meant to set up a server to be like the production server currently serving everything
+# reading it will inform you about the various services running, file structure, etc
 
 cd /root/backup_files # assuming the files from /home/steve/backups/ are placed in /root/backup_files
 
