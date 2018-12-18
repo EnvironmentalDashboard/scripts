@@ -8,7 +8,7 @@ date_default_timezone_set('America/New_York');
 
 $time = time();
 $options = getopt('v:');
-$verbose = ($options['v'] === '1') ? true : false;
+$verbose = (isset($options['v']) && $options['v'] === '1') ? true : false;
 $buoys = array_fill_keys(TARGET_BUOYS, []);
 $new_last_readings = array_fill_keys(TARGET_BUOYS, []);
 $last_readings = (file_exists(CACHE_FN)) ? unserialize(file_get_contents(CACHE_FN)) : false;
@@ -73,9 +73,15 @@ foreach ($buoys as $buoy => &$meters) {
 						break;
 					}
 				}
+				if (!isset($times[$i])) { // not sure how this could happen but if it does just skip this data point
+					continue;
+				}
 				$cur_meter_id = intval($cur_meter_id);
 				$value = floatval($value);
-				$new_row = [$cur_meter_id, ($value === -9999.0) ? null : $value, $times[$i] + OFFSET_TIME, 'live']; // -9999 is an error value
+				$new_row = [$cur_meter_id,
+										($value === -9999.0) ? null : $value, // -9999 is an error value
+										$times[$i] + OFFSET_TIME,
+										'live'];
 				try {
 					$stmt = $db->prepare('REPLACE INTO meter_data (meter_id, value, recorded, resolution) VALUES (?, ?, ?, ?)');
 					$stmt->execute($new_row);
