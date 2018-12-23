@@ -1,5 +1,5 @@
 <?php
-require '../../includes/db.php';
+require '/var/www/repos/includes/db.php';
 define('OFFSET_TIME', 978307200); // # of seconds between 1/1/1970 0:00 GMT and 1/1/2001 0:00 GMT
 define('STORAGE_DURATION', 259200); // at most we store 3 days of "live" data
 define('TARGET_BUOYS', ['leelyria', 'leavon', 'lementor', '45176']);
