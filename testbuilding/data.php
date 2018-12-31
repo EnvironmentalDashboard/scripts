@@ -6,12 +6,11 @@ date_default_timezone_set('America/New_York');
 
 // Multiplies the hour of the day by the % through the data we're outputting
 // Data will get smaller as time goes on
-function test_data($now, $start, $end) {
-  // $total_amt = $end - $start;
-  // $amt_left = $end - $now;
-  // return date('G', $now) * ($amt_left/$total_amt);
-  return null;
-}
+// function test_data($now, $start, $end) {
+//   $total_amt = $end - $start;
+//   $amt_left = $end - $now;
+//   return date('G', $now) * ($amt_left/$total_amt);
+// }
 
 $data = array();
 $start = strtotime($_GET['start']);
@@ -31,7 +30,8 @@ while ($start % $interval !== 0) { // Find the closest minute/quarterhour/hour/m
   $start--;
 }
 while ($start < $end) { // Fill the array until we hit $end
-  $data[] = array('value' => test_data($start, $static_start, $end), 'localtime' => date('c', $start));
+  // $data[] = array('value' => test_data($start, $static_start, $end), 'localtime' => date('c', $start));
+  $data[] = array('value' => 7, 'localtime' => date('c', $start));
   $start += $interval;
 }
 
