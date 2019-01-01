@@ -24,4 +24,4 @@ foreach ($db->query("SELECT id FROM meters WHERE source = 'buildingos' AND (id I
 		$stmt->execute([$meter['id'], $avg, $end, $res]);
 	}
 }
-?>
+closelog();

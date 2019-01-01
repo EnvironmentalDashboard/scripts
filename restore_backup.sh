@@ -58,6 +58,9 @@ ln -s /var/www/repos/calendar /var/www/repos/environmentaldashboard.org/symlinks
 ln -s /var/www/repos/community-voices/vendor/phpunit/phpunit/phpunit /var/www/repos/community-voices/vendor/bin/phpunit
 ln -s /var/www/uploads/calendar /var/www/repos/calendar/images/uploads
 ln -s /var/www/repos/includes /var/repos/includes
+ln -s /var/repos/scripts/testbuilding/token.php /var/www/repos/environmentaldashboard.org/dummy-bos-token.php
+ln -s /var/repos/scripts/testbuilding/data.php /var/www/repos/environmentaldashboard.org/dummy-bos-data.php
+ln -s /var/repos/scripts/travis-ci /var/www/repos/environmentaldashboard.org/travis-ci
 
 cd /var/repos/buildingos-api-daemons
 docker build -t buildingosd .
