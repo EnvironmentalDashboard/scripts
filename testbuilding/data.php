@@ -57,5 +57,5 @@ $output = array(
   ),
   'data' => $data
   );
+
 echo json_encode($output, JSON_PRETTY_PRINT);
-?>
