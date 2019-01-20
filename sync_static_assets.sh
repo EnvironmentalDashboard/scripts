@@ -6,7 +6,7 @@ fn="${BASH_SOURCE%/*}/ip.cache"
 # grep for whitespace returned otherwise
 ls "$fn" > /dev/null 2>&1 && \
 find "$fn" -mmin +1440 2>/dev/null | grep -q '[^[:space:]]' \
-|| curl -s http://ipecho.net/plain > "$fn"
+|| true
 res=$?
 # ip.cache contains non-whitespace charachters ie file is older than 1 day
 if [ $res -eq 0 ]; then
