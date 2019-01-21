@@ -1,10 +1,14 @@
 #!/bin/bash
 
-cd /root/
-apt-clone clone pckgs && rsync -azP /root/pckgs.apt-clone.tar.gz steve@ajlc.csr.oberlin.edu:/home/steve/backups/pckgs.apt-clone.tar.gz # https://unix.stackexchange.com/a/208163
-crontab -l > /root/crontab_backup && rsync -azP /root/crontab_backup steve@ajlc.csr.oberlin.edu:/home/steve/backups/crontab
-rsync -azP /var/www/uploads/ steve@ajlc.csr.oberlin.edu:/home/steve/backups/uploads
-rsync -azP /etc/ steve@ajlc.csr.oberlin.edu:/home/steve/backups/etc
-rsync -azP /root/db_backups/ steve@ajlc.csr.oberlin.edu:/home/steve/backups/db_backups
-rsync -azP /var/www/PHPMailer/ steve@ajlc.csr.oberlin.edu:/home/steve/backups/PHPMailer
-rsync -azP /var/secret/ steve@ajlc.csr.oberlin.edu:/home/steve/backups/secret
+# list user installed apt packageshttps://askubuntu.com/a/492343
+comm -23 <(apt-mark showmanual | sort -u) <(gzip -dc /var/log/installer/initial-status.gz | sed -n 's/^Package: //p' | sort -u) > /root/pckgs && rsync -az /root/pckgs nyc1@ajlc.csr.oberlin.edu:/home/nyc1/backups/pckgs # https://unix.stackexchange.com/a/208163
+# backup crontab
+crontab -l > /root/crontab_backup && rsync -az /root/crontab_backup nyc1@ajlc.csr.oberlin.edu:/home/nyc1/backups/crontab
+# backing up uploads is taken care of by sync_static_assets.sh
+#rsync -az /var/www/uploads/ nyc1@ajlc.csr.oberlin.edu:/home/nyc1/backups/uploads
+# server configs
+rsync -az /etc/ nyc1@ajlc.csr.oberlin.edu:/home/nyc1/backups/etc
+# db backups
+rsync -az /root/db_backups/ nyc1@ajlc.csr.oberlin.edu:/home/nyc1/backups/db_backups
+# db credentials, other secrets
+rsync -az /var/secret/ nyc1@ajlc.csr.oberlin.edu:/home/nyc1/backups/secret
