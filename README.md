@@ -1,3 +1,3 @@
 # Scripts
 
-This repo contains scripts to automate caching data from the BuildingOS API.
+This repo contains various scripts that don't really belong in a repository of their own.
