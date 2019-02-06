@@ -1,6 +1,6 @@
 <?php
 date_default_timezone_set('America/New_York');
-openlog($res, LOG_PID | LOG_ODELAY, LOG_AUTH); // logs will be sent to /var/log/auth.log
+openlog('Travis CI', LOG_PID | LOG_ODELAY, LOG_AUTH); // logs will be sent to /var/log/auth.log
 $time = date('c');
 // notifications will be sent from these IPs - see https://docs.travis-ci.com/user/notifications/#note-on-ip-addresses
 if (in_array($_SERVER['REMOTE_ADDR'], ['54.173.229.200', '54.175.230.252'])) {
