@@ -7,6 +7,7 @@
 <body>
 	<form action="" method="POST" id="form">
 		<input type="text" name="v" id="v" value="0,1,2,3,4">
+		<input type="text" name="uuid" id="uuid" placeholder="meter uuid">
 		<input type="text" name="t" id="t" value="12">
 		<input type="submit">
 	</form>

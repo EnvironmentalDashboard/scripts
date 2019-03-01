@@ -8,11 +8,10 @@ $t = (isset($_REQUEST['t'])) ? intval($_REQUEST['t']) : 10;
 $v = (isset($_REQUEST['v'])) ? json_decode($_REQUEST['v'], true) : [10, 30, 50, 70, 90];
 $count = count($v);
 for ($i=0; $i < $count; $i++) { 
-	$stmt = $db->prepare("UPDATE relative_values SET relative_value = ? WHERE meter_uuid = '0'");
-	$stmt->execute([$v[$i]]);
+	$stmt = $db->prepare("UPDATE relative_values SET relative_value = ? WHERE meter_uuid = ?");
+	$stmt->execute([$v[$i], $_REQUEST['uuid']]);
 	if ($i !== ($count-1)) {
 		sleep($t);
 	}
 }
 echo 'Success';
-?>
