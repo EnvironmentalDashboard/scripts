@@ -12,7 +12,7 @@ if [ $res -eq 0 ]; then
 fi
 ip=`cat "$fn"`
 if [ "$ip" == "159.89.232.129" ]; then
-  rsync -az /var/www/uploads nyc1@ajlc.csr.oberlin.edu:/var/www/
+  rsync -az --omit-dir-times /var/www/uploads nyc1@ajlc.csr.oberlin.edu:/var/www/
 elif [ "$ip" == "132.162.36.210" ]; then
-  rsync -az /var/www/uploads ajlc-csr@159.89.232.129:/var/www/
+  rsync -az --omit-dir-times /var/www/uploads ajlc-csr@159.89.232.129:/var/www/
 fi
