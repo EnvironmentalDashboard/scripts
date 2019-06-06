@@ -5,7 +5,7 @@ $time = time();
 $key = 'aac6c14f6ed11c4787ed18ed20a5c18b';
 $meters = [
     'Oberlin Air Temperature' => ['lat' => '41.29442793429477', 'lon' => '-82.21714374667339'],
-    'Cleveland Air Temperature' => ['lat' => '41.29442793429477', 'lon' => '-82.21714374667339']
+    'Cleveland Air Temperature' => ['lat' => '41.4993', 'lon' => '-81.6944']
 ];
 
 foreach ($meters as $meter => $coords) {
