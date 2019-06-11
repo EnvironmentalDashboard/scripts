@@ -23,6 +23,8 @@ foreach ($meters as $meter => $coords) {
     }
     $stmt = $db->prepare('REPLACE INTO meter_data (meter_id, value, recorded, resolution) VALUES (?, ?, ?, ?)');
     $stmt->execute([$id, $current_temp, $time, 'hour']);
+    $stmt = $db->prepare('UPDATE meters SET current = ? WHERE id = ?');
+    $stmt->execute([$current_temp, $id]);
 }
 
 function kelvin_to_fahrenheit($temp) {
