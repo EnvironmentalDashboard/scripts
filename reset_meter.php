@@ -2,24 +2,27 @@
 error_reporting(-1);
 ini_set('display_errors', 'On');
 require '../includes/db.php';
+require '../includes/class.BuildingOS.php';
 if (isset($_POST['submit'])) {
 	if ($_POST['id_type'] === 'uuid') {
 		$uuid = $_POST['id'];
-		$stmt = $db->prepare('SELECT id FROM meters WHERE bos_uuid = ?');
+		$stmt = $db->prepare('SELECT org_id, id FROM meters WHERE bos_uuid = ?');
 		$stmt->execute(array($uuid));
-		$id = $stmt->fetchColumn();
+		$res = $stmt->fetch();
+		$id = $res['id'];
 	} else {
 		$id = $_POST['id'];
-		$stmt = $db->prepare('SELECT bos_uuid FROM meters WHERE id = ?');
+		$stmt = $db->prepare('SELECT org_id, bos_uuid FROM meters WHERE id = ?');
 		$stmt->execute(array($id));
-		$uuid = $stmt->fetchColumn();
+		$res = $stmt->fetch();
+		$uuid = $res['bos_uuid'];
 	}
-	$stmt = $db->prepare('DELETE FROM meter_data WHERE meter_id = ? AND resolution != ?');
-	$stmt->execute(array($id, 'live'));
-	$stmt = $db->prepare('UPDATE meters SET quarterhour_last_updated = -1, hour_last_updated = -1 WHERE bos_uuid = ?');
-	$stmt->execute(array($uuid));
-	exec('bash -c "exec nohup setsid /var/repos/daemons/buildingosd -do -rquarterhour > /dev/null 2>&1 &"');
-	exec('bash -c "exec nohup setsid /var/repos/daemons/buildingosd -do -rhour > /dev/null 2>&1 &"');
+	$stmt = $db->prepare('SELECT api_id FROM orgs WHERE id = ?');
+	$stmt->execute([$res['org_id']]);
+	$bos = new BuildingOS($db, $stmt->fetchColumn());
+	$bos->resetMeter($id, 'live');
+	$bos->resetMeter($id, 'quarterhour');
+	$bos->resetMeter($id, 'hour');
 	$success = true;
 } else {
 	$success = false;
