@@ -93,6 +93,14 @@ foreach ($buoys as $buoy => &$meters) {
 						echo $e->getMessage() . ': ' . json_encode($new_row) . "\n";
 					}
 				}
+				try {
+					$stmt = $db->prepare('UPDATE meters SET current = ? WHERE id = ?');
+					$stmt->execute([$new_row[1], $new_row[0]]);
+				} catch (PDOException $e) { // if value is out of range
+					if ($verbose) {
+						echo "Error updating current meter reading: " . $e->getMessage() . "\n";
+					}
+				}
 			}
 		}
 	}
