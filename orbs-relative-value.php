@@ -8,8 +8,10 @@ require '/var/www/repos/includes/db.php';
 $datahubIdArr = [];
 $relativeValueArr = [];
 
+$dataHubIdsResult = $db->query('SELECT datahub_elec_id AS datahub_id, elec_rvid AS relative_value_id from orbs WHERE disabled = 0 AND datahub_elec_id IS NOT NULL UNION SELECT datahub_water_id AS datahub_id, water_rvid AS relative_value_id from orbs WHERE disabled = 0 AND datahub_water_id is not null order by `datahub_id` ASC');
+
 // getting data from orbs table
-foreach ($db->query('select datahub_elec_id as datahub_id, elec_rvid as relative_value_id from orbs where disabled = 0 union select datahub_water_id as datahub_id, water_rvid as relative_value_id from orbs where disabled = 0 order by `datahub_id` ASC') as $row) {
+foreach ($dataHubIdsResult as $row) {
     // checking if datahub is not null
     if(!is_null(($row['datahub_id'])))
     {   
