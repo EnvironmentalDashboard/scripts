@@ -2,7 +2,7 @@
 error_reporting(-1);
 ini_set('display_errors', 'On');
 require '/var/www/repos/includes/db.php';
-$time = time();
+$time = time() - 120;
 $res = 'hour';
 $end = floor(($time - 3600) / 10) * 10;
 $start = $end - 3600;
